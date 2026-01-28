@@ -1,10 +1,12 @@
 use super::{AppModel, Message};
 use crate::services::clipboard;
-use cosmic::iced::{Limits, Subscription};
+use cosmic::iced::Subscription;
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
 use cosmic::prelude::*;
 use futures_util::SinkExt;
 use std::time::Duration;
+
+const MAX_HISTORY: usize = 30;
 
 pub fn subscription(_app: &AppModel) -> Subscription<Message> {
     struct ClipboardSubscription;
@@ -61,7 +63,7 @@ pub fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Action<Messa
             // Remove any existing entries that match to keep the history unique
             app.history.retain(|existing| existing != &entry);
             app.history.push_front(entry);
-            while app.history.len() > 20 {
+            while app.history.len() > MAX_HISTORY {
                 app.history.pop_back();
             }
         }
@@ -86,18 +88,13 @@ pub fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Action<Messa
             } else {
                 let new_id = cosmic::iced::window::Id::unique();
                 app.popup.replace(new_id);
-                let mut popup_settings = app.core.applet.get_popup_settings(
+                let popup_settings = app.core.applet.get_popup_settings(
                     app.core.main_window_id().unwrap(),
                     new_id,
                     None,
                     None,
                     None,
                 );
-                popup_settings.positioner.size_limits = Limits::NONE
-                    .max_width(372.0)
-                    .min_width(300.0)
-                    .min_height(200.0)
-                    .max_height(1080.0);
                 get_popup(popup_settings)
             };
         }

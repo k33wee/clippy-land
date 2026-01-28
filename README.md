@@ -9,7 +9,7 @@ This applet polls the Wayland clipboard and updates the history when the content
 
 Main features:
 
-- Keep a history of the latest **20** clipboard entries (text + images)
+- Keep a history of the latest **30** clipboard entries (text + images)
 - Re-copy an entry with a single click
 - Remove individual entries from the history
 

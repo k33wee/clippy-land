@@ -16,9 +16,7 @@ pub fn view(app: &AppModel) -> Element<'_, Message> {
 }
 
 pub fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
-    let mut content = widget::list_column()
-        .padding([8, 0])
-        .spacing(0);
+    let mut content = widget::list_column().padding([8, 0]).spacing(0);
 
     if app.history.is_empty() {
         content = content.add(widget::text::body(fl!("empty")));
@@ -34,11 +32,9 @@ pub fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
                     thumbnail_png,
                     ..
                 } => {
-                    let thumb = thumbnail_png.as_ref().map(|png| {
-                        widget::image(ImageHandle::from_bytes(png.clone()))
-                            .width(Length::Fixed(40.0))
-                            .height(Length::Fixed(40.0))
-                    });
+                    let thumb = thumbnail_png
+                        .as_ref()
+                        .map(|png| widget::image(ImageHandle::from_bytes(png.clone())));
 
                     let meta = widget::text::body(format!(
                         "{} ({} KB)",
@@ -46,11 +42,13 @@ pub fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
                         (bytes.len().saturating_add(1023)) / 1024
                     ));
 
-                    let mut row = widget::row::Row::new().spacing(8);
+                    let mut col = widget::column::Column::new()
+                        .spacing(4)
+                        .align_x(Alignment::Center);
                     if let Some(thumb) = thumb {
-                        row = row.push(thumb);
+                        col = col.push(thumb);
                     }
-                    row.push(meta).into()
+                    col.push(meta).into()
                 }
             };
 
@@ -74,6 +72,19 @@ pub fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
         }
     }
 
+    // Add a fixed height with scrolling when there are many items
+    let content = if app.history.len() > 5 {
+        widget::scrollable(content)
+            .width(Length::Fill)
+            .height(Length::Fixed(400.0))
+    } else {
+        widget::scrollable(content)
+            .width(Length::Fill)
+            .height(Length::Shrink)
+    };
+
+    let content = widget::container(content).padding([8, 8]);
+
     app.core.applet.popup_container(content).into()
 }
 
@@ -85,7 +96,7 @@ fn summarize_one_line(text: &str) -> String {
         .unwrap_or("")
         .trim_end()
         .to_string();
-    const MAX_CHARS: usize = 60;
+    const MAX_CHARS: usize = 25;
     if line.chars().count() > MAX_CHARS {
         line = line.chars().take(MAX_CHARS - 1).collect::<String>();
         line.push('…');
