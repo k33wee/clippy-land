@@ -8,6 +8,7 @@ bin_dir := env_var_or_default("BIN_DIR", "~/.local/bin")
 app_dir := env_var_or_default("APP_DIR", "~/.local/share/applications")
 icon_dir := env_var_or_default("ICON_DIR", "~/.local/share/icons/hicolor/scalable/apps")
 metainfo_dir := env_var_or_default("METAINFO_DIR", "~/.local/share/metainfo")
+exec_path := env_var_or_default("EXEC_PATH", bin_dir + "/" + name)
 
 # default recipe
 _default:
@@ -21,6 +22,7 @@ build:
 install: build
     install -Dm755 target/release/{{name}} {{bin_dir}}/{{name}}
     install -Dm644 resources/com.keewee.CosmicAppletClippyLand.desktop {{app_dir}}/{{appid}}.desktop
+    sed -i "s|^Exec=.*|Exec={{exec_path}} %F|" {{app_dir}}/{{appid}}.desktop
     install -Dm644 resources/app.metainfo.xml {{metainfo_dir}}/{{appid}}.metainfo.xml
     install -Dm644 resources/icon.svg {{icon_dir}}/{{appid}}.svg
     update-desktop-database {{app_dir}} || true

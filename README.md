@@ -44,6 +44,9 @@ just build
 # install for current user
 just install
 
+# install with a custom Exec path in the desktop entry
+EXEC_PATH=/usr/bin/cosmic-applet-clippy-land just install
+
 # uninstall
 just uninstall
 ```
