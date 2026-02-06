@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-applet-clippy-land"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 license = "MIT"
 description = "Clipboard history applet for COSMIC"
