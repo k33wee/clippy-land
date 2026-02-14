@@ -5,9 +5,12 @@
   <project_license>GPL-3.0-or-later</project_license>
   <name>Clippy Land</name>
   <summary>Clipboard history applet for COSMIC</summary>
+  <summary xml:lang="cs">Applet historie schránky pro COSMIC</summary>
   <description>
     <p>A COSMIC panel applet that keeps a history of recently copied text.</p>
+    <p xml:lang="cs">Applet pro panel COSMIC, který udržuje historii nedávno zkopírovaného textu.</p>
     <p>Use it to quickly re-select and re-use clipboard entries from the panel.</p>
+    <p xml:lang="cs">Umožňuje s rychlostí znovu vybrat a použít záznamy schránky přímo z panelu.</p>
   </description>
   <icon type="stock">com.keewee.CosmicAppletClippyLand</icon>
   <launchable type="desktop-id">com.keewee.CosmicAppletClippyLand.desktop</launchable>
