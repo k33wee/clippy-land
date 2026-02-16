@@ -51,6 +51,23 @@ EXEC_PATH=/usr/bin/cosmic-applet-clippy-land just install
 just uninstall
 ```
 
+## Install for Fedora
+Thanks to [lorduskordus](https://github.com/lorduskordus) there is now an RPM package on COPR.
+
+- https://copr.fedorainfracloud.org/coprs/kordus/cosmic-applets
+
+Fedora Workstation
+```sh
+sudo dnf copr enable kordus/cosmic-applets
+sudo dnf install cosmic-applet-clippy-land
+```
+
+Fedora Atomic
+```sh
+sudo wget -O /etc/yum.repos.d/_copr:copr.fedorainfracloud.org:kordus:cosmic-applets.repo https://copr.fedorainfracloud.org/coprs/kordus/cosmic-applets/repo/fedora/kordus-cosmic-applets.repo
+rpm-ostree install cosmic-applet-clippy-land
+```
+
 ## Usage
 
 Open **COSMIC Settings → Desktop → Panel → Applets** and add “Clippy Land” to your panel.
@@ -58,3 +75,10 @@ Open **COSMIC Settings → Desktop → Panel → Applets** and add “Clippy Lan
 ## Notes
 
 - App ID is currently `com.keewee.CosmicAppletClippyLand`
+
+## Translations
+
+Thanks to our community contributors, Clippy Land is available in the following languages:
+
+- **English** (Added by myself)
+- **Czech** (Added by [lorduskordus](https://github.com/lorduskordus))
