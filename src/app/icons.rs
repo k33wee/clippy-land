@@ -1,6 +1,7 @@
 use cosmic::widget;
 
 const REMOVE_SVG: &[u8] = include_bytes!("../../resources/icons/user-trash-symbolic.svg");
+const PIN_SVG: &[u8] = include_bytes!("../../resources/icons/pin-symbolic.svg");
 
 fn svg_icon(bytes: &'static [u8]) -> widget::icon::Handle {
     let mut svg = String::from_utf8_lossy(bytes).into_owned();
@@ -14,4 +15,8 @@ fn svg_icon(bytes: &'static [u8]) -> widget::icon::Handle {
 
 pub fn remove_icon() -> widget::icon::Handle {
     svg_icon(REMOVE_SVG)
+}
+
+pub fn pin_icon() -> widget::icon::Handle {
+    svg_icon(PIN_SVG)
 }

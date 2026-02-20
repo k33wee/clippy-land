@@ -22,7 +22,7 @@ pub fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
         content = content.add(widget::text::body(fl!("empty")));
     } else {
         for (idx, item) in app.history.iter().enumerate() {
-            let label: Element<'_, Message> = match item {
+            let label: Element<'_, Message> = match &item.entry {
                 clipboard::ClipboardEntry::Text(text) => {
                     widget::text::body(summarize_one_line(text)).into()
                 }
@@ -55,6 +55,11 @@ pub fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
             let copy_button = menu_button(label)
                 .on_press(Message::CopyFromHistory(idx))
                 .width(Length::Fill);
+            let pin_button = widget::button::icon(icons::pin_icon())
+                .tooltip(if item.pinned { fl!("unpin") } else { fl!("pin") })
+                .on_press(Message::TogglePin(idx))
+                .extra_small()
+                .width(Length::Shrink);
             let remove_button = widget::button::icon(icons::remove_icon())
                 .tooltip(fl!("remove"))
                 .on_press(Message::RemoveHistory(idx))
@@ -66,6 +71,7 @@ pub fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
                     .padding([4, 0])
                     .align_y(Alignment::Center)
                     .push(copy_button)
+                    .push(pin_button)
                     .push(remove_button)
                     .width(Length::Fill),
             );

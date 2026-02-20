@@ -7,6 +7,7 @@ pub enum Message {
     TogglePopup,
     PopupClosed(Id),
     ClipboardChanged(clipboard::ClipboardEntry),
+    TogglePin(usize),
     RemoveHistory(usize),
     CopyFromHistory(usize),
 }
