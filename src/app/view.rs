@@ -55,11 +55,15 @@ pub fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
             let copy_button = menu_button(label)
                 .on_press(Message::CopyFromHistory(idx))
                 .width(Length::Fill);
-            let pin_button = widget::button::icon(icons::pin_icon())
-                .tooltip(if item.pinned { fl!("unpin") } else { fl!("pin") })
-                .on_press(Message::TogglePin(idx))
-                .extra_small()
-                .width(Length::Shrink);
+            let pin_button = widget::button::icon(if item.pinned {
+                icons::pin_icon_pinned()
+            } else {
+                icons::pin_icon()
+            })
+            .tooltip(if item.pinned { fl!("unpin") } else { fl!("pin") })
+            .on_press(Message::TogglePin(idx))
+            .extra_small()
+            .width(Length::Shrink);
             let remove_button = widget::button::icon(icons::remove_icon())
                 .tooltip(fl!("remove"))
                 .on_press(Message::RemoveHistory(idx))
