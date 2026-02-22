@@ -43,8 +43,14 @@ just build
 # install for current user
 just install
 
-# install with a custom Exec path in the desktop entry
-EXEC_PATH=/usr/bin/cosmic-applet-clippy-land just install
+# install with custom paths (supported env vars: BIN_DIR, APP_DIR, ICON_DIR, METAINFO_DIR, EXEC_PATH)
+# note: `just install` expands a leading `~/` in EXEC_PATH before writing the desktop `Exec=` line
+BIN_DIR=~/.local/bin \
+APP_DIR=~/.local/share/applications \
+ICON_DIR=~/.local/share/icons/hicolor/scalable/apps \
+METAINFO_DIR=~/.local/share/metainfo \
+EXEC_PATH=~/.local/bin/cosmic-applet-clippy-land \
+just install
 
 # uninstall
 just uninstall
@@ -82,5 +88,6 @@ Open **COSMIC Settings → Desktop → Panel → Applets** and add “Clippy Lan
 
 Thanks to our community contributors, Clippy Land is available in the following languages:
 
-- **English** (Added by myself)
-- **Czech** (Added by [lorduskordus](https://github.com/lorduskordus))
+- Italian ([k33wee](https://github.com/k33wee))
+- **English** ([k33wee](https://github.com/k33wee))
+- **Czech** ([lorduskordus](https://github.com/lorduskordus))
