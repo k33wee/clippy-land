@@ -2,7 +2,8 @@
 
 COSMIC panel applet for keeping a history of recently copied text and images.
 
-This applet polls the Wayland clipboard and updates the history when the contents change.
+This applet polls the Wayland clipboard and updates the history when
+the contents change.
 
 ![applet example](./resources/example.png)
 
@@ -11,6 +12,7 @@ Main features:
 - Keep a history of the latest **30** clipboard entries (text + images)
 - Re-copy an entry with a single click
 - Remove individual entries from the history
+- Pin important entries to the top of the history (5 pinned entries max)
 
 ## Dependencies
 
@@ -43,7 +45,8 @@ just build
 # install for current user
 just install
 
-# install with custom paths (supported env vars: BIN_DIR, APP_DIR, ICON_DIR, METAINFO_DIR, EXEC_PATH)
+# install with custom paths
+# (supported env vars: BIN_DIR, APP_DIR, ICON_DIR, METAINFO_DIR, EXEC_PATH)
 # note: `just install` expands a leading `~/` in EXEC_PATH before writing the desktop `Exec=` line
 BIN_DIR=~/.local/bin \
 APP_DIR=~/.local/share/applications \
@@ -60,7 +63,7 @@ just uninstall
 
 Thanks to [lorduskordus](https://github.com/lorduskordus) there is now an RPM package on COPR.
 
-- https://copr.fedorainfracloud.org/coprs/kordus/cosmic-applets
+- [copr.fedorainfracloud.org/coprs/kordus/cosmic-applets](https://copr.fedorainfracloud.org/coprs/kordus/cosmic-applets)
 
 Fedora Workstation
 
