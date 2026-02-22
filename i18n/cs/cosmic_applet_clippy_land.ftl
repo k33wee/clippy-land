@@ -1,4 +1,4 @@
 empty = Schránka je prázdná
 remove = Odstranit
-pin = Pin
-unpin = Unpin
+pin = Připnout
+unpin = Odepnout
