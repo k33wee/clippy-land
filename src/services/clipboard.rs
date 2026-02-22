@@ -4,7 +4,7 @@ use std::io::{Cursor, Read};
 
 use wl_clipboard_rs::{
     copy::{MimeType as CopyMimeType, Options as CopyOptions, Source},
-    paste::{ClipboardType, MimeType as PasteMimeType, Seat, get_contents},
+    paste::{get_contents, ClipboardType, MimeType as PasteMimeType, Seat},
 };
 
 const MAX_IMAGE_BYTES: usize = 8 * 1024 * 1024;

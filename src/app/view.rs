@@ -1,9 +1,9 @@
-use super::{AppModel, Message, icons};
+use super::{icons, AppModel, Message};
 use crate::fl;
 use crate::services::clipboard;
 use cosmic::applet::menu_button;
 use cosmic::iced::widget::image::Handle as ImageHandle;
-use cosmic::iced::{Alignment, Length, window::Id};
+use cosmic::iced::{window::Id, Alignment, Length};
 use cosmic::prelude::*;
 use cosmic::widget;
 
@@ -60,7 +60,11 @@ pub fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
             } else {
                 icons::pin_icon()
             })
-            .tooltip(if item.pinned { fl!("unpin") } else { fl!("pin") })
+            .tooltip(if item.pinned {
+                fl!("unpin")
+            } else {
+                fl!("pin")
+            })
             .on_press(Message::TogglePin(idx))
             .extra_small()
             .width(Length::Shrink);

@@ -7,7 +7,7 @@ mod view;
 pub use messages::Message;
 pub use model::AppModel;
 
-use cosmic::iced::{Subscription, window::Id};
+use cosmic::iced::{window::Id, Subscription};
 use cosmic::prelude::*;
 
 impl cosmic::Application for AppModel {

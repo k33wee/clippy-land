@@ -1,5 +1,5 @@
-use super::{AppModel, Message};
 use super::model::HistoryItem;
+use super::{AppModel, Message};
 use crate::services::clipboard;
 use cosmic::iced::Subscription;
 use cosmic::iced_winit::commands::popup::{destroy_popup, get_popup};
@@ -90,13 +90,7 @@ pub fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Action<Messa
                 .and_then(|idx| app.history.remove(idx))
                 .is_some_and(|it| it.pinned);
 
-            insert_after_pins(
-                &mut app.history,
-                HistoryItem {
-                    entry,
-                    pinned,
-                },
-            );
+            insert_after_pins(&mut app.history, HistoryItem { entry, pinned });
             trim_history(&mut app.history);
         }
         Message::TogglePin(index) => {

@@ -8,8 +8,10 @@
   <summary xml:lang="cs">Applet historie schránky pro COSMIC</summary>
   <description>
     <p>A COSMIC panel applet that keeps a history of recently copied text.</p>
+    <p xml:lang="it">Applet per COSMIC panel, mantiene la cronologia del testo copiato di recente.</p>
     <p xml:lang="cs">Applet pro panel COSMIC, který udržuje historii nedávno zkopírovaného textu.</p>
     <p>Use it to quickly re-select and re-use clipboard entries from the panel.</p>
+    <p xml:lang="it">Usalo per selezionare e riutilizzare rapidamente le voci degli appunti dal pannello.</p>
     <p xml:lang="cs">Umožňuje s rychlostí znovu vybrat a použít záznamy schránky přímo z panelu.</p>
   </description>
   <icon type="stock">com.keewee.CosmicAppletClippyLand</icon>

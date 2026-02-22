@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=Clippy Land
 Comment=Clipboard history applet for COSMIC
+Comment[it]=Applet per la cronologia della clipboard per COSMIC
 Comment[cs]=Applet historie schránky pro COSMIC
 Type=Application
 Icon=com.keewee.CosmicAppletClippyLand
