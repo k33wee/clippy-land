@@ -19,16 +19,11 @@ Main features:
 - Wayland clipboard support (via `wl-clipboard-rs`)
 - Build dependencies for libcosmic on Debian-based systems:
   - cargo
-  - cmake
   - just
   - pkg-config
   - libxkbcommon-dev
   - libwayland-dev
   - libgl1-mesa-dev
-  - libssl-dev
-  - libexpat1-dev
-  - libfontconfig-dev
-  - libfreetype-dev
 
 ## Build
 
@@ -91,6 +86,6 @@ Open **COSMIC Settings → Desktop → Panel → Applets** and add “Clippy Lan
 
 Thanks to our community contributors, Clippy Land is available in the following languages:
 
-- Italian ([k33wee](https://github.com/k33wee))
+- **Italian** ([k33wee](https://github.com/k33wee))
 - **English** ([k33wee](https://github.com/k33wee))
 - **Czech** ([lorduskordus](https://github.com/lorduskordus))
