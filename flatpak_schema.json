@@ -1,0 +1,56 @@
+{
+  "id": "com.keewee.CosmicAppletClippyLand", 
+  "runtime": "org.freedesktop.Platform",
+  "runtime-version": "25.08",
+  "base": "com.system76.Cosmic.BaseApp",
+  "base-version": "stable",
+  "sdk": "org.freedesktop.Sdk",
+  "sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
+  "command": "cosmic-applet-clippy-land",
+  "finish-args": [
+    "--share=ipc",
+    "--socket=wayland",
+    "--filesystem=/run/user",
+    "--talk-name=com.system76.CosmicSettingsDaemon",
+    "--filesystem=xdg-config/cosmic:rw"
+  ],
+  "build-options": {
+    "append-path": "/usr/lib/sdk/rust-stable/bin",
+    "env": {
+      "CARGO_HOME": "/run/build/cosmic-applet-clippy-land/cargo",
+      "BIN_DIR": "/app/bin",
+      "APP_DIR": "/app/share/applications",
+      "ICON_DIR": "/app/share/icons/hicolor/scalable/apps",
+      "METAINFO_DIR": "/app/share/metainfo",
+      "EXEC_PATH": "/app/bin/cosmic-applet-clippy-land"
+    }
+  },
+  "modules": [
+    {
+      "name": "cosmic-applet-clippy-land",
+      "buildsystem": "simple",
+      "build-commands": [
+        "just build",
+        "just install"
+      ],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://github.com/k33wee/clippy-land.git",
+          "branch": "main"
+        },
+        {
+          "type": "dir",
+          "path": "vendor",
+          "dest": "vendor"
+        },
+        {
+          "type": "file",
+          "path": ".cargo/config.toml",
+          "dest": ".cargo",
+          "dest-filename": "config.toml"
+        }
+      ]
+    }
+  ]
+}
