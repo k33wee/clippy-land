@@ -1,16 +1,12 @@
 [Desktop Entry]
 Name=Clippy Land
 Comment=Clipboard history applet for COSMIC
-Comment[it]=Applet per la cronologia della clipboard per COSMIC
-Comment[pt]=Applet de busca no histórico da área de transferência para COSMIC
-Comment[cs]=Applet historie schránky pro COSMIC
 Type=Application
 Icon=com.keewee.CosmicAppletClippyLand
-Exec=cosmic-applet-clippy-land %F
+Exec=cosmic-applet-clippy-land
 Terminal=false
 StartupNotify=true
-Categories=Utility;X-COSMIC;
-Keywords=COSMIC
+Categories=Cosmic;Iced;
 NoDisplay=true
 X-CosmicApplet=true
 X-CosmicHoverPopup=Auto

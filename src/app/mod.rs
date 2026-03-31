@@ -36,6 +36,35 @@ impl cosmic::Application for AppModel {
         core: cosmic::Core,
         _flags: Self::Flags,
     ) -> (Self, Task<cosmic::Action<Self::Message>>) {
+        // Debug: print startup info to stderr to help diagnose panel launch
+        let pid = std::process::id();
+        let args: Vec<String> = std::env::args().collect();
+        let envs: Vec<(String, String)> = std::env::vars().collect();
+        let filtered: Vec<(String, String)> = envs
+            .iter()
+            .filter(|(k, _)| k.starts_with("COSMIC") || k.contains("APPL") || k.contains("DBUS") || k.contains("XDG"))
+            .cloned()
+            .collect();
+        eprintln!(
+            "clippy-land init: pid={} args={:?} env-filter={:?}",
+            pid,
+            args,
+            filtered
+        );
+
+        // Also write a small runtime file to help detect if the applet was launched by the panel
+        let _ = (|| {
+            if let Ok(dir) = std::env::var("XDG_RUNTIME_DIR").or_else(|_| std::env::var("TMPDIR")).or(Ok(String::from("/tmp"))) {
+                let path = format!("{}/clippy-land-startup-{}.log", dir, pid);
+                if let Ok(mut f) = std::fs::File::create(&path) {
+                    use std::io::Write;
+                    let _ = writeln!(f, "pid={}", pid);
+                    let _ = writeln!(f, "args={:?}", args);
+                    let _ = writeln!(f, "env-filter={:?}", filtered);
+                }
+            }
+        })();
+
         (
             AppModel {
                 core,

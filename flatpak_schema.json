@@ -30,14 +30,13 @@
       "name": "cosmic-applet-clippy-land",
       "buildsystem": "simple",
       "build-commands": [
-        "just build",
-        "just install"
+        "just build-release --verbose --offline",
+        "just prefix=/app install"
       ],
       "sources": [
         {
-          "type": "git",
-          "url": "https://github.com/k33wee/clippy-land.git",
-          "branch": "main"
+          "type": "dir",
+          "path": "."
         },
         {
           "type": "dir",
@@ -49,6 +48,10 @@
           "path": ".cargo/config.toml",
           "dest": ".cargo",
           "dest-filename": "config.toml"
+        },
+        {
+          "type": "file",
+          "path": "justfile"
         }
       ]
     }
