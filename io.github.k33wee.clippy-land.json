@@ -6,18 +6,27 @@
   "base-version": "stable",
   "sdk": "org.freedesktop.Sdk",
   "sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
-  "command": "cosmic-applet-clippy-land",
+  "command": "cosmic-applet-clippy-land.sh",
   "finish-args": [
     "--share=ipc",
     "--socket=wayland",
+    "--socket=fallback-x11",
+    "--device=dri",
     "--filesystem=/run/user",
     "--talk-name=com.system76.CosmicSettingsDaemon",
-    "--filesystem=xdg-config/cosmic:rw"
+    "--talk-name=org.freedesktop.portal.Desktop",
+    "--talk-name=org.freedesktop.portal.Settings",
+    "--filesystem=xdg-config/cosmic:rw",
+    "--filesystem=xdg-data/themes:ro",
+    "--filesystem=xdg-config/cosmic:ro",
+    "--filesystem=xdg-config/gtk-3.0:ro"
   ],
   "build-options": {
     "append-path": "/usr/lib/sdk/rust-stable/bin",
     "env": {
       "CARGO_HOME": "/run/build/cosmic-applet-clippy-land/cargo",
+      "COSMIC_DATA_CONTROL": "1",
+      "XDG_CURRENT_DESKTOP": "COSMIC",
       "BIN_DIR": "/app/bin",
       "APP_DIR": "/app/share/applications",
       "ICON_DIR": "/app/share/icons/hicolor/scalable/apps",

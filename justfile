@@ -25,6 +25,7 @@ build-release *args:
 # Install for current user
 install:
     install -Dm755 target/release/{{name}} {{bin_dir}}/{{name}}
+    install -Dm755 resources/{{name}}.sh {{bin_dir}}/{{name}}.sh
     install -Dm644 resources/{{appid}}.desktop {{app_dir}}/{{appid}}.desktop
     install -Dm644 resources/{{appid}}.metainfo.xml {{metainfo_dir}}/{{appid}}.metainfo.xml
     install -Dm644 resources/icon.svg {{icon_dir}}/{{appid}}-symbolic.svg
@@ -35,6 +36,7 @@ install:
 # Uninstall for current user
 uninstall:
     rm -f {{bin_dir}}/{{name}}
+    rm -f {{bin_dir}}/{{name}}.sh
     rm -f {{app_dir}}/{{appid}}.desktop
     rm -f {{metainfo_dir}}/{{appid}}.metainfo.xml
     rm -f {{icon_dir}}/{{appid}}-symbolic.svg

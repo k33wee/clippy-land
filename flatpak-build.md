@@ -16,19 +16,11 @@ cargo metadata --offline --format-version 1 >/dev/null
 
 
 # Uninstall old version
-flatpak uninstall com.keewee.CosmicAppletClippyLand -y || true
+flatpak uninstall io.github.k33wee.clippy-land -y || true
 
-# Build AND export to repo in one step
-flatpak-builder --force-clean --repo=repo build-dir flatpak_schema.json
-
-# (Re)add the local remote
+# Build and install the new version
+flatpak-builder --force-clean --repo=repo build-dir io.github.k33wee.clippy-land.json
 flatpak --user remote-delete local-repo || true
 flatpak --user remote-add --no-gpg-verify local-repo file://$PWD/repo
-
-# Install
-flatpak --user install local-repo com.keewee.CosmicAppletClippyLand
-
-# Test run (optional — the panel will launch it normally)
-flatpak run com.keewee.CosmicAppletClippyLand
-
+flatpak --user install local-repo io.github.k33wee.clippy-land
 ```
