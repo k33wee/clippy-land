@@ -6,7 +6,7 @@ NAME=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].name')
 VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
 DESC=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].description')
 ARCH=amd64
-APPID=com.keewee.CosmicAppletClippyLand
+APPID=io.github.k33wee.clippy-land
 
 # Build the project
 cargo build --release

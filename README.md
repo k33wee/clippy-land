@@ -94,7 +94,7 @@ You might need to log out and back in to see the applet in the list of available
 
 ## Notes
 
-- App ID is currently `com.keewee.CosmicAppletClippyLand`
+- App ID is currently `io.github.k33wee.clippy-land`.
 
 ## Translations
 
