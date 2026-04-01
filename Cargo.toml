@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-applet-clippy-land"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["k33wee (https://github.com/k33wee)"]
 edition = "2024"
 license = "GPL-3.0-or-later"
