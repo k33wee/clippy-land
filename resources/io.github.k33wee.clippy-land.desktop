@@ -2,7 +2,7 @@
 Name=Clippy Land
 Comment=Clipboard history applet for COSMIC
 Type=Application
-Icon=com.keewee.CosmicAppletClippyLand
+Icon=io.github.k33wee.clippy-land-symbolic
 Exec=cosmic-applet-clippy-land
 Terminal=false
 StartupNotify=true

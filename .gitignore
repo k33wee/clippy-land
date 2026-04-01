@@ -6,3 +6,4 @@ deb_build/
 *.deb
 repo/
 .cargo/
+*.log

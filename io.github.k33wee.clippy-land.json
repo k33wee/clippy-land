@@ -1,5 +1,5 @@
 {
-  "id": "com.keewee.CosmicAppletClippyLand", 
+  "id": "io.github.k33wee.clippy-land",
   "runtime": "org.freedesktop.Platform",
   "runtime-version": "25.08",
   "base": "com.system76.Cosmic.BaseApp",
@@ -21,8 +21,7 @@
       "BIN_DIR": "/app/bin",
       "APP_DIR": "/app/share/applications",
       "ICON_DIR": "/app/share/icons/hicolor/scalable/apps",
-      "METAINFO_DIR": "/app/share/metainfo",
-      "EXEC_PATH": "/app/bin/cosmic-applet-clippy-land"
+      "METAINFO_DIR": "/app/share/metainfo"
     }
   },
   "modules": [
@@ -31,7 +30,7 @@
       "buildsystem": "simple",
       "build-commands": [
         "just build-release --verbose --offline",
-        "just prefix=/app install"
+        "just install"
       ],
       "sources": [
         {

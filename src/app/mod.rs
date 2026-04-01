@@ -22,7 +22,7 @@ impl cosmic::Application for AppModel {
     type Message = Message;
 
     /// Unique identifier in RDNN (reverse domain name notation) format
-    const APP_ID: &'static str = "com.keewee.CosmicAppletClippyLand";
+    const APP_ID: &'static str = "io.github.k33wee.clippy-land";
 
     fn core(&self) -> &cosmic::Core {
         &self.core
@@ -54,14 +54,13 @@ impl cosmic::Application for AppModel {
 
         // Also write a small runtime file to help detect if the applet was launched by the panel
         let _ = (|| {
-            if let Ok(dir) = std::env::var("XDG_RUNTIME_DIR").or_else(|_| std::env::var("TMPDIR")).or(Ok(String::from("/tmp"))) {
-                let path = format!("{}/clippy-land-startup-{}.log", dir, pid);
-                if let Ok(mut f) = std::fs::File::create(&path) {
-                    use std::io::Write;
-                    let _ = writeln!(f, "pid={}", pid);
-                    let _ = writeln!(f, "args={:?}", args);
-                    let _ = writeln!(f, "env-filter={:?}", filtered);
-                }
+            let dir = std::env::var("XDG_RUNTIME_DIR").or_else(|_| std::env::var("TMPDIR")).unwrap_or_else(|_| String::from("/tmp"));
+            let path = format!("{}/clippy-land-startup-{}.log", dir, pid);
+            if let Ok(mut f) = std::fs::File::create(&path) {
+                use std::io::Write;
+                let _ = writeln!(f, "pid={}", pid);
+                let _ = writeln!(f, "args={:?}", args);
+                let _ = writeln!(f, "env-filter={:?}", filtered);
             }
         })();
 

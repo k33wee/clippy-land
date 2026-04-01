@@ -14,14 +14,21 @@ cargo vendor > .cargo/config.toml
 # verify offline metadata works
 cargo metadata --offline --format-version 1 >/dev/null
 
-# then build
-flatpak-builder --force-clean build-dir flatpak_schema.json
 
-# (Re)create remote and install:
+# Uninstall old version
+flatpak uninstall com.keewee.CosmicAppletClippyLand -y || true
+
+# Build AND export to repo in one step
+flatpak-builder --force-clean --repo=repo build-dir flatpak_schema.json
+
+# (Re)add the local remote
 flatpak --user remote-delete local-repo || true
 flatpak --user remote-add --no-gpg-verify local-repo file://$PWD/repo
+
+# Install
 flatpak --user install local-repo com.keewee.CosmicAppletClippyLand
 
-# Run:
+# Test run (optional — the panel will launch it normally)
 flatpak run com.keewee.CosmicAppletClippyLand
+
 ```
