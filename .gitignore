@@ -7,3 +7,4 @@ deb_build/
 repo/
 .cargo/
 *.log
+*.flatpak
