@@ -60,15 +60,14 @@ just uninstall
 
 ## Install with Flatpak
 
-1. Make sure you have Flatpak installed. See https://flatpak.org/setup/ if needed.
-2. Add the required remotes (if not already added):
+1. Add the required remotes (if not already added):
 
 ```bash
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 ```
 
-3. Download the latest `.flatpak` from the [releases page](https://github.com/k33wee/clippy-land/releases/).
-4. In a terminal, navigate to the directory where you downloaded the `.flatpak` file and run:
+2. Download the latest `.flatpak` from the [releases page](https://github.com/k33wee/clippy-land/releases/).
+3. In a terminal, navigate to the directory where you downloaded the `.flatpak` file and run:
 
 ```bash
 flatpak install --user ./clippy-land_<version>.flatpak
