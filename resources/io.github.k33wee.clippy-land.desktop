@@ -1,6 +1,8 @@
 [Desktop Entry]
 Name=Clippy Land
 Comment=Clipboard history applet for COSMIC
+Comment[it]=COSMIC applet per la cronologia della clipboard
+Comment[pt]=Applet de busca no histórico da área de transferência para COSMIC
 Comment[cs]=Applet historie schránky pro COSMIC
 Type=Application
 Icon=io.github.k33wee.clippy-land-symbolic

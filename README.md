@@ -103,7 +103,7 @@ Thanks to [lorduskordus](https://github.com/lorduskordus) there is now an RPM pa
 
 - [copr.fedorainfracloud.org/coprs/kordus/cosmic-applets](https://copr.fedorainfracloud.org/coprs/kordus/cosmic-applets)
 
-Fedora Workstation
+Traditional Fedora
 
 ```sh
 sudo dnf copr enable kordus/cosmic-applets
@@ -113,7 +113,9 @@ sudo dnf install cosmic-applet-clippy-land
 Fedora Atomic
 
 ```sh
-sudo wget -O /etc/yum.repos.d/_copr:copr.fedorainfracloud.org:kordus:cosmic-applets.repo https://copr.fedorainfracloud.org/coprs/kordus/cosmic-applets/repo/fedora/kordus-cosmic-applets.repo
+sudo wget \
+    https://copr.fedorainfracloud.org/coprs/kordus/cosmic-applets/repo/fedora/kordus-cosmic-applets.repo \
+    -O /etc/yum.repos.d/_copr:copr.fedorainfracloud.org:kordus:cosmic-applets.repo
 rpm-ostree install cosmic-applet-clippy-land
 ```
 

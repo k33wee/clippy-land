@@ -9,6 +9,8 @@
   <description>
     <p>A COSMIC panel applet that keeps a history of recently copied text.</p>
     <p xml:lang="cs">Applet pro panel COSMIC, který uchovává historii nedávno zkopírovaného textu.</p>
+    <p xml:lang="it">COSMIC panel applet, mantiene la cronologia del testo copiato di recente.</p>
+    <p xml:lang="pt">Um applet para o painel COSMIC que mantém histórico de cópias recentes.</p>
   </description>
   <icon type="stock">io.github.k33wee.clippy-land-symbolic</icon>
   <launchable type="desktop-id">io.github.k33wee.clippy-land.desktop</launchable>
