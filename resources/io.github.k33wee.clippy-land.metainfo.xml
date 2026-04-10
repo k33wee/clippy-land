@@ -5,8 +5,10 @@
   <project_license>GPL-3.0-or-later</project_license>
   <name>Clippy Land</name>
   <summary>Clipboard history applet for COSMIC</summary>
+  <summary xml:lang="cs">Applet historie schránky pro COSMIC</summary>
   <description>
     <p>A COSMIC panel applet that keeps a history of recently copied text.</p>
+    <p xml:lang="cs">Applet pro panel COSMIC, který uchovává historii nedávno zkopírovaného textu.</p>
   </description>
   <icon type="stock">io.github.k33wee.clippy-land-symbolic</icon>
   <launchable type="desktop-id">io.github.k33wee.clippy-land.desktop</launchable>
@@ -28,6 +30,7 @@
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/k33wee/clippy-land/main/resources/example.png</image>
       <caption>Clipboard history popup</caption>
+      <caption xml:lang="cs">Okno historie schránky</caption>
     </screenshot>
   </screenshots>
   <releases>
