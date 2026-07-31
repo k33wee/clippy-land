@@ -38,9 +38,9 @@ pub(super) fn text_item(text: &str, pinned: bool) -> HistoryItem {
 pub(super) fn image_entry(hash: u64) -> ClipboardEntry {
     ClipboardEntry::Image {
         mime: "image/png".to_string(),
-        bytes: vec![1, 2, 3, 4],
+        bytes: vec![1, 2, 3, 4].into(),
         hash,
-        thumbnail_png: Some(vec![137, 80, 78, 71]),
+        thumbnail_png: Some(vec![137, 80, 78, 71].into()),
     }
 }
 

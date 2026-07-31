@@ -5,8 +5,8 @@
 
 COSMIC panel applet for keeping a history of recently copied text and images.
 
-This applet polls the Wayland clipboard and updates the history when
-the contents change.
+This applet listens for Wayland data-control selection events and updates the
+history only when the clipboard contents change.
 
 ![applet example](./resources/example.png)
 

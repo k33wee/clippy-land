@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use super::image::{
     clipboard_entry_from_image_bytes, clipboard_entry_from_image_path, log_image_too_large,
 };
@@ -101,6 +103,21 @@ pub fn write_clipboard_image(mime: &str, bytes: &[u8]) -> bool {
     match opts.copy(
         Source::Bytes(bytes.to_vec().into_boxed_slice()),
         CopyMimeType::Specific(mime.to_string()),
+    ) {
+        Ok(()) => true,
+        Err(err) => {
+            debug_log(format!("clipboard image write error: {err:?}"));
+            false
+        }
+    }
+}
+
+pub fn write_owned_clipboard_image(mime: String, bytes: bytes::Bytes) -> bool {
+    let opts = CopyOptions::new();
+    let bytes: Vec<u8> = bytes.into();
+    match opts.copy(
+        Source::Bytes(bytes.into_boxed_slice()),
+        CopyMimeType::Specific(mime),
     ) {
         Ok(()) => true,
         Err(err) => {

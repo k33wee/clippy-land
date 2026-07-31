@@ -18,8 +18,10 @@ fn search_changed_updates_query_and_clears_hover_and_keyboard() {
 
 #[test]
 fn search_changed_empty_string_clears_query() {
-    let mut app = AppModel::default();
-    app.search_query = "old".into();
+    let mut app = AppModel {
+        search_query: "old".into(),
+        ..Default::default()
+    };
 
     dispatch(&mut app, Message::SearchChanged(String::new()));
 

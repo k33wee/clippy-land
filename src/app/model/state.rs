@@ -3,7 +3,7 @@ use crate::settings::AppSettings;
 use cosmic::iced::widget::image::Handle as ImageHandle;
 use cosmic::iced::window::Id;
 use std::cell::RefCell;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use super::timing::PopupOpenTrace;
 
@@ -41,6 +41,12 @@ pub struct AppModel {
     pub(in crate::app) filtered_history_len_cache: usize,
     /// Cached decoded image handles for thumbnails, keyed by (content hash, byte length).
     pub(in crate::app) thumbnail_handles: HashMap<(u64, usize), ImageHandle>,
+    /// Image identities waiting for or currently undergoing popup-preview decoding.
+    pub(in crate::app) pending_thumbnails: HashSet<(u64, usize)>,
+    /// Monotonic generation used to debounce thumbnail work after clipboard updates.
+    pub(in crate::app) thumbnail_schedule_generation: u64,
+    /// Images rejected by the decoder, so reopening the popup does not retry them forever.
+    pub(in crate::app) failed_thumbnails: HashSet<(u64, usize)>,
     /// Index of the history entry the mouse is currently hovering over.
     pub(in crate::app) hovered_index: Option<usize>,
     /// The specific part of a row the mouse is hovering over (index, part)

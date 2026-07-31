@@ -1,12 +1,22 @@
+use bytes::Bytes;
+
 #[derive(Debug, Clone)]
 pub enum ClipboardEntry {
     Text(String),
     Image {
         mime: String,
-        bytes: Vec<u8>,
+        bytes: Bytes,
         hash: u64,
-        thumbnail_png: Option<Vec<u8>>,
+        thumbnail_png: Option<Bytes>,
     },
+}
+
+#[derive(Debug, Clone)]
+pub struct ClipboardThumbnail {
+    pub width: u32,
+    pub height: u32,
+    pub rgba: Bytes,
+    pub png: Bytes,
 }
 
 impl ClipboardEntry {

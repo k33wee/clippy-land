@@ -17,8 +17,10 @@ fn toggling_pinned_item_moves_it_after_pinned_section() {
 
 #[test]
 fn toggle_pin_respects_max_pinned_limit() {
-    let mut app = AppModel::default();
-    app.settings = test_settings(30, 5);
+    let mut app = AppModel {
+        settings: test_settings(30, 5),
+        ..Default::default()
+    };
 
     for i in 0..app.settings.max_pinned {
         app.history.push_back(text_item(&format!("pin-{i}"), true));
@@ -35,8 +37,10 @@ fn toggle_pin_respects_max_pinned_limit() {
 
 #[test]
 fn clipboard_changed_trims_to_max_history() {
-    let mut app = AppModel::default();
-    app.settings = test_settings(30, 5);
+    let mut app = AppModel {
+        settings: test_settings(30, 5),
+        ..Default::default()
+    };
 
     for i in 0..app.settings.max_history {
         app.history

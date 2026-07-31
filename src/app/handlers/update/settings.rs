@@ -132,6 +132,7 @@ pub(super) fn handle(app: &mut AppModel, message: Message) -> bool {
                 app.settings.max_image_bytes,
                 app.settings.max_image_dimension_px,
             );
+            app.failed_thumbnails.clear();
             history::reconcile_limits(&mut app.history, &app.settings);
             pinned_history::save(&app.history);
             prune_thumbnail_handles(app);

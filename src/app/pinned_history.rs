@@ -189,12 +189,13 @@ impl PersistedEntry {
                 let thumbnail_png = self
                     .thumbnail_file
                     .and_then(|file_name| safe_blob_path(blob_dir, &file_name))
-                    .and_then(|path| fs::read(path).ok());
+                    .and_then(|path| fs::read(path).ok())
+                    .map(Into::into);
 
                 Some(HistoryItem {
                     entry: ClipboardEntry::Image {
                         mime,
-                        bytes,
+                        bytes: bytes.into(),
                         hash,
                         thumbnail_png,
                     },
@@ -344,9 +345,9 @@ mod tests {
         HistoryItem {
             entry: ClipboardEntry::Image {
                 mime: "image/png".to_string(),
-                bytes: vec![1, 2, 3, 4, 5],
+                bytes: vec![1, 2, 3, 4, 5].into(),
                 hash,
-                thumbnail_png: Some(vec![137, 80, 78, 71]),
+                thumbnail_png: Some(vec![137, 80, 78, 71].into()),
             },
             pinned,
         }
@@ -379,7 +380,7 @@ mod tests {
                 thumbnail_png,
             } => {
                 assert_eq!(mime, "image/png");
-                assert_eq!(bytes.as_slice(), &[1, 2, 3, 4, 5]);
+                assert_eq!(bytes.as_ref(), &[1, 2, 3, 4, 5]);
                 assert_eq!(*hash, 0xfeed_beef);
                 assert_eq!(thumbnail_png.as_deref(), Some(&[137, 80, 78, 71][..]));
             }

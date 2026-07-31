@@ -2,15 +2,17 @@ use super::*;
 
 #[test]
 fn toggle_settings_panel_opens_and_prefills_draft() {
-    let mut app = AppModel::default();
-    app.settings = AppSettings {
-        max_history: 444,
-        max_pinned: 33,
-        max_image_bytes: 3 * 1024 * 1024,
-        max_image_dimension_px: 2048,
-        ..AppSettings::default()
-    }
-    .normalized();
+    let mut app = AppModel {
+        settings: AppSettings {
+            max_history: 444,
+            max_pinned: 33,
+            max_image_bytes: 3 * 1024 * 1024,
+            max_image_dimension_px: 2048,
+            ..AppSettings::default()
+        }
+        .normalized(),
+        ..Default::default()
+    };
 
     dispatch(&mut app, Message::ToggleSettingsPanel);
 
@@ -26,8 +28,10 @@ fn toggle_settings_panel_opens_and_prefills_draft() {
 
 #[test]
 fn apply_settings_rejects_invalid_input_with_error() {
-    let mut app = AppModel::default();
-    app.settings_open = true;
+    let mut app = AppModel {
+        settings_open: true,
+        ..Default::default()
+    };
     app.settings_draft.max_history = "not-a-number".into();
     app.settings_draft.max_pinned = "10".into();
     app.settings_draft.max_image_bytes = "1048576".into();
@@ -41,8 +45,10 @@ fn apply_settings_rejects_invalid_input_with_error() {
 
 #[test]
 fn apply_settings_rejects_out_of_range_values() {
-    let mut app = AppModel::default();
-    app.settings_open = true;
+    let mut app = AppModel {
+        settings_open: true,
+        ..Default::default()
+    };
     app.settings_draft.max_history = "1".into();
     app.settings_draft.max_pinned = "0".into();
     app.settings_draft.max_image_bytes = "1048576".into();
@@ -57,8 +63,10 @@ fn apply_settings_rejects_out_of_range_values() {
 
 #[test]
 fn apply_settings_rejects_pinned_greater_than_history() {
-    let mut app = AppModel::default();
-    app.settings_open = true;
+    let mut app = AppModel {
+        settings_open: true,
+        ..Default::default()
+    };
     app.settings_draft.max_history = "100".into();
     app.settings_draft.max_pinned = "101".into();
     app.settings_draft.max_image_bytes = "1048576".into();
@@ -75,8 +83,10 @@ fn apply_settings_rejects_pinned_greater_than_history() {
 
 #[test]
 fn apply_settings_rejects_image_bytes_below_minimum() {
-    let mut app = AppModel::default();
-    app.settings_open = true;
+    let mut app = AppModel {
+        settings_open: true,
+        ..Default::default()
+    };
     app.settings_draft.max_history = "200".into();
     app.settings_draft.max_pinned = "20".into();
     app.settings_draft.max_image_bytes = "1".into();
@@ -98,8 +108,10 @@ fn apply_settings_updates_runtime_settings_and_closes_panel() {
     let cfg_path = std::env::temp_dir().join(format!("clippy-land-test-settings-{unique}.toml"));
     unsafe { std::env::set_var("CLIPPY_LAND_CONFIG", &cfg_path) };
 
-    let mut app = AppModel::default();
-    app.settings_open = true;
+    let mut app = AppModel {
+        settings_open: true,
+        ..Default::default()
+    };
     app.settings_draft.max_history = "350".into();
     app.settings_draft.max_pinned = "30".into();
     app.settings_draft.max_image_bytes = "2097152".into();

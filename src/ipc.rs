@@ -135,7 +135,7 @@ fn unix_timestamp_ms() -> std::io::Result<u128> {
     SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .map(|duration| duration.as_millis())
-        .map_err(|err| std::io::Error::other(err))
+        .map_err(std::io::Error::other)
 }
 
 fn ipc_timing_log(message: impl std::fmt::Display) {

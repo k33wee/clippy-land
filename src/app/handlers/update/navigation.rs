@@ -133,7 +133,7 @@ pub(super) fn handle(
                 match part {
                     FocusPart::Entry => {
                         if let Some(item) = app.history.get(idx) {
-                            history::copy_history_item(item);
+                            return Some(history::copy_history_item(item));
                         }
                     }
                     FocusPart::Preview => {
@@ -157,10 +157,10 @@ pub(super) fn handle(
                         }
                     }
                 }
-            } else if let Some(idx) = app.hovered_index {
-                if let Some(item) = app.history.get(idx) {
-                    history::copy_history_item(item);
-                }
+            } else if let Some(idx) = app.hovered_index
+                && let Some(item) = app.history.get(idx)
+            {
+                return Some(history::copy_history_item(item));
             }
             Some(Task::none())
         }

@@ -15,9 +15,11 @@ fn hover_entry_sets_hover_state_and_clears_keyboard_focus() {
 
 #[test]
 fn hover_entry_none_clears_hover_state() {
-    let mut app = AppModel::default();
-    app.hovered_index = Some(2);
-    app.hovered_focus = Some((2, FocusPart::Remove));
+    let mut app = AppModel {
+        hovered_index: Some(2),
+        hovered_focus: Some((2, FocusPart::Remove)),
+        ..Default::default()
+    };
 
     dispatch(&mut app, Message::HoverEntry(None));
 

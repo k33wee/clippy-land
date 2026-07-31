@@ -14,6 +14,16 @@ pub enum Message {
     /// Sent when a window loses focus, used to close the layer surface popup.
     WindowUnfocused(Id),
     ClipboardChanged(clipboard::ClipboardEntry),
+    ThumbnailDecodeReady {
+        hash: u64,
+        bytes_len: usize,
+        generation: u64,
+    },
+    ThumbnailReady {
+        hash: u64,
+        bytes_len: usize,
+        thumbnail: Option<clipboard::ClipboardThumbnail>,
+    },
     TogglePin(usize),
     OpenTextOverlay(usize),
     CloseTextOverlay,

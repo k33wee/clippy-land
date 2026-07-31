@@ -13,10 +13,24 @@ pub(super) fn insert_after_pins(history: &mut VecDeque<HistoryItem>, item: Histo
 }
 
 fn reorder_pins_first(history: &mut VecDeque<HistoryItem>) {
-    let pinned: Vec<_> = history.iter().filter(|it| it.pinned).cloned().collect();
-    let unpinned: Vec<_> = history.iter().filter(|it| !it.pinned).cloned().collect();
+    let mut saw_unpinned = false;
+    let already_ordered = history.iter().all(|item| {
+        if item.pinned {
+            !saw_unpinned
+        } else {
+            saw_unpinned = true;
+            true
+        }
+    });
+    if already_ordered {
+        return;
+    }
 
-    history.clear();
+    // Move entries instead of cloning them.  An image entry owns the complete encoded image, so
+    // cloning here would copy several megabytes on every clipboard update.
+    let entries = std::mem::take(history);
+    let (pinned, unpinned): (Vec<_>, Vec<_>) = entries.into_iter().partition(|item| item.pinned);
+
     history.extend(pinned);
     history.extend(unpinned);
 }
@@ -77,17 +91,34 @@ pub(super) fn toggle_pin(
     true
 }
 
-pub(super) fn copy_history_item(item: &HistoryItem) {
-    copy_clipboard_entry(&item.entry);
+pub(super) fn copy_history_item(
+    item: &HistoryItem,
+) -> cosmic::iced::Task<cosmic::Action<crate::app::Message>> {
+    copy_clipboard_entry(&item.entry)
 }
 
-pub(super) fn copy_clipboard_entry(entry: &ClipboardEntry) {
+pub(super) fn copy_clipboard_entry(
+    entry: &ClipboardEntry,
+) -> cosmic::iced::Task<cosmic::Action<crate::app::Message>> {
+    use cosmic::prelude::*;
+
     match entry {
         ClipboardEntry::Text(text) => {
             _ = clipboard::write_clipboard_text(text);
+            Task::none()
         }
         ClipboardEntry::Image { mime, bytes, .. } => {
-            _ = clipboard::write_clipboard_image(mime, bytes);
+            let mime = mime.clone();
+            let bytes = bytes.clone();
+            Task::perform(
+                async move {
+                    _ = tokio::task::spawn_blocking(move || {
+                        clipboard::write_owned_clipboard_image(mime, bytes)
+                    })
+                    .await;
+                },
+                |_| cosmic::Action::None,
+            )
         }
     }
 }

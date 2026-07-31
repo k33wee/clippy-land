@@ -14,9 +14,9 @@ fn image_entry(
 ) -> ClipboardEntry {
     ClipboardEntry::Image {
         mime: mime.to_string(),
-        bytes,
+        bytes: bytes.into(),
         hash,
-        thumbnail_png,
+        thumbnail_png: thumbnail_png.map(Into::into),
     }
 }
 
@@ -87,44 +87,103 @@ fn creates_image_entry_from_local_file_path() {
 }
 
 #[test]
-fn rejects_image_with_oversized_dimensions() {
+fn image_entry_defers_thumbnail_decoding() {
+    let img = RgbaImage::from_pixel(8, 4, Rgba([0, 255, 0, 255]));
+    let mut png = Vec::new();
+    DynamicImage::ImageRgba8(img)
+        .write_to(&mut Cursor::new(&mut png), ImageFormat::Png)
+        .expect("test image encoding should work");
+
+    let entry = super::image::clipboard_entry_from_image_bytes("image/png".to_string(), png)
+        .expect("image entry should be created");
+
+    match entry {
+        ClipboardEntry::Image { thumbnail_png, .. } => assert!(thumbnail_png.is_none()),
+        ClipboardEntry::Text(_) => panic!("expected image entry"),
+    }
+}
+
+#[test]
+fn builds_rgba_and_png_thumbnail_on_demand() {
+    let img = RgbaImage::from_pixel(8, 4, Rgba([0, 255, 0, 255]));
+    let mut png = Vec::new();
+    DynamicImage::ImageRgba8(img)
+        .write_to(&mut Cursor::new(&mut png), ImageFormat::Png)
+        .expect("test image encoding should work");
+
+    let thumbnail = super::make_thumbnail("image/png", &png.into())
+        .expect("valid image should produce a thumbnail");
+
+    assert_eq!((thumbnail.width, thumbnail.height), (8, 4));
+    assert_eq!(thumbnail.rgba.len(), 8 * 4 * 4);
+    assert!(thumbnail.png.starts_with(&[137, 80, 78, 71]));
+}
+
+fn encode_large_test_png() -> Vec<u8> {
+    let img = RgbaImage::from_fn(1024, 768, |x, y| {
+        let mixed = x
+            .wrapping_mul(0x9E37_79B9)
+            .wrapping_add(y.wrapping_mul(0x85EB_CA6B));
+        Rgba([
+            mixed as u8,
+            mixed.rotate_left(11) as u8,
+            mixed.rotate_left(21) as u8,
+            255,
+        ])
+    });
+    let mut png = Vec::new();
+    DynamicImage::ImageRgba8(img)
+        .write_to(&mut Cursor::new(&mut png), ImageFormat::Png)
+        .expect("test image encoding should work");
+    png
+}
+
+#[test]
+fn streams_large_png_directly_into_bounded_thumbnail_storage() {
+    let png = encode_large_test_png();
+
+    let thumbnail = super::make_thumbnail("image/png", &png.into())
+        .expect("valid large PNG should produce a thumbnail");
+
+    assert_eq!((thumbnail.width, thumbnail.height), (400, 300));
+    assert_eq!(thumbnail.rgba.len(), 400 * 300 * 4);
+}
+
+#[test]
+#[ignore = "manual benchmark for the 2-4 MiB clipboard-image workload"]
+fn benchmark_large_png_thumbnail_decode() {
+    let png = encode_large_test_png();
+    assert!(
+        (2 * 1024 * 1024..=4 * 1024 * 1024).contains(&png.len()),
+        "benchmark PNG is {} bytes",
+        png.len()
+    );
+
+    let started = std::time::Instant::now();
+    let thumbnail = super::make_thumbnail("image/png", &png.into())
+        .expect("benchmark PNG should produce a thumbnail");
+    eprintln!(
+        "decoded 2-4 MiB PNG into {}x{} thumbnail in {:?}",
+        thumbnail.width,
+        thumbnail.height,
+        started.elapsed()
+    );
+}
+
+#[test]
+fn rejects_thumbnail_with_oversized_dimensions() {
     let huge = RgbaImage::from_pixel(9000, 1, Rgba([255, 0, 0, 255]));
     let mut png = Vec::new();
     DynamicImage::ImageRgba8(huge)
         .write_to(&mut Cursor::new(&mut png), ImageFormat::Png)
         .expect("huge test image encoding should work");
 
-    let entry = super::image::clipboard_entry_from_image_bytes("image/png".to_string(), png)
-        .expect("image entry should still be created");
-
-    match entry {
-        ClipboardEntry::Image { thumbnail_png, .. } => {
-            assert!(
-                thumbnail_png.is_none(),
-                "oversized-dimension image should not generate thumbnail"
-            );
-        }
-        ClipboardEntry::Text(_) => panic!("expected image entry"),
-    }
+    assert!(super::make_thumbnail("image/png", &png.into()).is_none());
 }
 
 #[test]
 fn rejects_malformed_image_bytes_for_thumbnail() {
-    let entry = super::image::clipboard_entry_from_image_bytes(
-        "image/png".to_string(),
-        vec![1, 2, 3, 4, 5, 6, 7],
-    )
-    .expect("entry should still be created with raw bytes");
-
-    match entry {
-        ClipboardEntry::Image { thumbnail_png, .. } => {
-            assert!(
-                thumbnail_png.is_none(),
-                "malformed image should not generate thumbnail"
-            );
-        }
-        ClipboardEntry::Text(_) => panic!("expected image entry"),
-    }
+    assert!(super::make_thumbnail("image/png", &vec![1, 2, 3, 4, 5, 6, 7].into()).is_none());
 }
 
 fn wayland_tests_enabled() -> bool {

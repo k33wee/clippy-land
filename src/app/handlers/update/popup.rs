@@ -1,4 +1,4 @@
-use super::shared::warm_thumbnail_handles;
+use super::shared::{schedule_missing_thumbnails, warm_thumbnail_handles};
 use crate::app::{AppModel, Message};
 use cosmic::prelude::*;
 use std::time::Instant;
@@ -15,6 +15,7 @@ pub(super) fn handle(
                 app.popup_controls_ready = true;
                 app.note_popup_stage_marker("popup controls ready after popup open");
                 app.note_popup_opened();
+                return Some(schedule_missing_thumbnails(app));
             }
             Some(Task::none())
         }

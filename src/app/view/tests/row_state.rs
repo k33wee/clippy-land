@@ -32,9 +32,9 @@ fn row_render_state_image_snapshot_keeps_lightweight_metadata_and_handle() {
     app.history.push_back(HistoryItem {
         entry: ClipboardEntry::Image {
             mime: "image/png".into(),
-            bytes: vec![7; 4096],
+            bytes: vec![7; 4096].into(),
             hash: 42,
-            thumbnail_png: Some(thumbnail.clone()),
+            thumbnail_png: Some(thumbnail.clone().into()),
         },
         pinned: true,
     });
@@ -66,9 +66,9 @@ fn row_render_state_image_snapshot_without_cached_handle_keeps_none() {
     app.history.push_back(HistoryItem {
         entry: ClipboardEntry::Image {
             mime: "image/png".into(),
-            bytes: vec![7; 4096],
+            bytes: vec![7; 4096].into(),
             hash: 777,
-            thumbnail_png: Some(vec![1, 2, 3, 4]),
+            thumbnail_png: Some(vec![1, 2, 3, 4].into()),
         },
         pinned: false,
     });

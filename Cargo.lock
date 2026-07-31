@@ -881,15 +881,21 @@ dependencies = [
 name = "cosmic-applet-clippy-land"
 version = "1.0.0"
 dependencies = [
+ "bytes",
  "futures-util",
  "i18n-embed",
  "i18n-embed-fl",
  "image",
  "libcosmic",
+ "os_pipe",
+ "png 0.18.1",
  "rust-embed",
  "serde",
  "tokio",
  "toml 0.9.12+spec-1.1.0",
+ "wayland-client",
+ "wayland-protocols",
+ "wayland-protocols-wlr",
  "wl-clipboard-rs",
 ]
 

@@ -22,7 +22,7 @@ pub(super) fn push_image(app: &mut AppModel, mime: &str) {
     app.history.push_back(HistoryItem {
         entry: ClipboardEntry::Image {
             mime: mime.to_string(),
-            bytes: vec![],
+            bytes: vec![].into(),
             hash: 0,
             thumbnail_png: None,
         },

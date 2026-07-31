@@ -4,7 +4,6 @@ use crate::services::clipboard;
 use cosmic::iced::Subscription;
 use cosmic::iced::futures::channel::mpsc;
 use futures_util::SinkExt;
-use std::time::Duration;
 
 use cosmic::iced::core::keyboard::key::Named as NamedKey;
 
@@ -14,20 +13,14 @@ pub(super) fn subscription(app: &AppModel) -> Subscription<Message> {
     let mut subs: Vec<Subscription<Message>> = vec![
         Subscription::run_with(std::any::TypeId::of::<ClipboardSubscription>(), |_| {
             cosmic::iced::stream::channel(1, move |mut channel: mpsc::Sender<Message>| async move {
+                let (clipboard_tx, mut clipboard_rx) = tokio::sync::mpsc::channel(1);
+                std::thread::Builder::new()
+                    .name("clipboard-watcher".to_string())
+                    .spawn(move || clipboard::watch_clipboard(clipboard_tx))
+                    .expect("clipboard watcher thread should start");
                 let mut last_seen: Option<clipboard::ClipboardFingerprint> = None;
 
-                loop {
-                    tokio::time::sleep(Duration::from_millis(500)).await;
-
-                    let next = tokio::task::spawn_blocking(clipboard::read_clipboard_entry)
-                        .await
-                        .ok()
-                        .flatten();
-
-                    let Some(next) = next else {
-                        continue;
-                    };
-
+                while let Some(next) = clipboard_rx.recv().await {
                     let next_fp = next.fingerprint();
                     if last_seen.as_ref() == Some(&next_fp) {
                         continue;
