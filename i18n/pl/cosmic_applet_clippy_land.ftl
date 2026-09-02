@@ -3,5 +3,5 @@ remove = Usuń
 pin = Przypnij
 unpin = Odepnij
 delete-all = Wyczyść historię
-search-placeholder = Szukaj w histori schowka
+search-placeholder = Szukaj w historii schowka
 no-results = Nie znaleziono pasujących wyników
