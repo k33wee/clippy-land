@@ -21,17 +21,28 @@
       Kliknutím na ikonu v panelu můžete procházet, znovu kopírovat, připínat nebo mazat položky schránky, aniž byste museli přerušit svou práci.
       Poznámka: Tento applet funguje pouze v prostředí COSMIC™.
     </p>
+    </p>
+    <p xml:lang="pl">
+      Clippy Land jest appletem dla panelu COSMIC, który zachowuje historię poprzednio skopiowanych tekstów i obrazów.
+      Kliknij w ikonę na panelu by przeglądać, ponownie kopiować, przypinać lub usuwać pozycje nie przerywając pracy.
+      Uwaga: ten aplet działa jedynie w środowisku COSMIC™.
+    </p>
     <p xml:lang="it">COSMIC panel applet che mantiene la cronologia del testo e delle immagini copiati.</p>
     <p xml:lang="pt">Um applet para o painel COSMIC que mantém histórico de cópias recentes de texto e imagens.</p>
     <p>Features:</p>
     <p xml:lang="cs">Funkce:</p>
+    <p xml:lang="cs">Funkcje:</p>
     <ul>
       <li>Re-copy an entry with a single click</li>
+      <li xml:lang="pl">Ponowienie kopii danej pozycji poprzez pojedyncze kliknięcie</li>
       <li>Remove individual entries from the history</li>
+      <li xml:lang="pl">Usunięcie pojedynczych pozycji z historii</li>
       <li>Clear all entries from history with one click</li>
+      <li xml:lang="pl">Wyczyszczenie historii całego schowka jedynym kliknięciem </li>
       <li>
         Pin important entries to the top of the history (configurable pin limit, pinned entries persist across app restarts/reboots)
       </li>
+      <li xml:lang="pl">Przypnij ważne pozycje na samej górze historii (konfigurowalny limit przypiętych pozycji, trwający mimo restartów aplikacji)</li>
       <li>
         In-popup <b>Settings</b> panel to adjust limits and apply them immediately:
         <ul>
@@ -41,6 +52,7 @@
           <li>max image dimensions</li>
         </ul>
       </li>
+      <li xml:lang="pl">W ustawieniach wyskakującego okna można dostosować limity: maksymalnych liczby pozycji w historii, przypiętych pozycji, bitów obrazów i ich wymiarów</li>
       <li>
         Smooth row behavior for text and image entries:
         <ul>
@@ -50,9 +62,11 @@
           <li>image previews keep a fixed size and centered row actions for stable targeting</li>
         </ul>
       </li>
+      <li xml:lang="pl">Inteligentnie dostosowuje się do wielkości apletu tekst i obrazy. Tekst po naciśnięciu ikony lupy pokazuje się w całości, a obrazy zawsze są dostępne w podobnym miejscu.</li>
       <li>
         Move between entries with keyboard ( <b>up/down</b> or <b>k/j</b> to navigate rows; <b>left/right</b> or <b>h/l</b> to move between row actions: copy, preview (when available), pin, delete)
       </li>
+      <li xml:lang="pl">Poruszaj się pomiędzy pozycjami przy pomocy klawiatury (góra/dół lub k/j pomiędzy wierszami, lewy/prawy lub h/l między akcjami: kopiuj, podgląd, przypnij, usuń)</li>
       <li>
         Keyboard activation and escape behavior:
         <ul>
@@ -61,6 +75,7 @@
           <li>press <b>Esc</b> to close the popup</li>
         </ul>
       </li>
+      <li xml:lang="pl">Aktywacja klawiaturą i wyjście z interakcji: Enter by wykonać akcję, Q by wyjść z podglądy i Esc by zamkąć wyskakujące okno</li>
     </ul>
     <ul>
       <li xml:lang="cs">Uložení až 30 položek schránky (text a obrázky)</li>
@@ -106,6 +121,14 @@
     <keyword xml:lang="cs">Wayland</keyword>
     <keyword xml:lang="cs">kopírovat</keyword>
     <keyword xml:lang="cs">vložit</keyword>
+    <keyword xml:lang="pl">schowek</keyword>
+    <keyword xml:lang="pl">historia</keyword>
+    <keyword xml:lang="pl">panel</keyword>
+    <keyword xml:lang="pl">aplet</keyword>
+    <keyword xml:lang="pl">COSMIC</keyword>
+    <keyword xml:lang="pl">Wayland</keyword>
+    <keyword xml:lang="pl">kopiować</keyword>
+    <keyword xml:lang="pl">wkleić</keyword>
   </keywords>
   <screenshots>
     <screenshot type="default">
