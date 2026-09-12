@@ -3,6 +3,7 @@ Name=Clippy Land
 Comment=Clipboard history applet for COSMIC
 Comment[cs]=Applet historie schránky pro COSMIC
 Comment[it]=COSMIC applet per la cronologia della clipboard
+Comment[pl]=Aplet historii schowka dla COSMIC
 Comment[pt]=Applet de busca no histórico da área de transferência para COSMIC
 Type=Application
 Icon=io.github.k33wee.clippy-land-symbolic
