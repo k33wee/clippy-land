@@ -13,6 +13,8 @@
     "--socket=fallback-x11",
     "--filesystem=/run/user",
     "--filesystem=xdg-config/cosmic:rw",
+    "--own-name=io.github.k33wee.ClippyLand",
+    "--talk-name=io.github.k33wee.ClippyLand",
     "--talk-name=com.system76.CosmicSettingsDaemon"
   ],
   "build-options": {

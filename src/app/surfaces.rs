@@ -55,6 +55,6 @@ fn default_live_settings(_: &AppModel) -> LiveSettings {
     LiveSettings::default()
 }
 
-fn surface_task(action: cosmic::surface::Action) -> Task<cosmic::Action<Message>> {
+fn surface_task(action: cosmic::surface::Action<Message>) -> Task<cosmic::Action<Message>> {
     cosmic::surface::surface_task(action)
 }

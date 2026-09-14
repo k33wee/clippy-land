@@ -9,7 +9,7 @@ fn main() -> cosmic::iced::Result {
 
     for arg in std::env::args().skip(1) {
         if arg == "--toggle" || arg == "-t" {
-            if let Err(e) = ipc::send_toggle_signal() {
+            if let Err(e) = ipc::send_toggle() {
                 eprintln!("Failed to toggle clippy-land: {e}");
                 std::process::exit(1);
             }
