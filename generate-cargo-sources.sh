@@ -33,5 +33,5 @@ fi
 
 echo "→ Generating ${OUTPUT} from Cargo.lock ..."
 uv run --with aiohttp --with tomlkit "${GENERATOR}" Cargo.lock -o "${OUTPUT}"
-uv run scripts/check-cargo-sources.py "${OUTPUT}"
+python3 scripts/check-cargo-sources.py --rewrite "${OUTPUT}"
 echo "✔ Done — ${OUTPUT} updated"

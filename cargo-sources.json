@@ -609,7 +609,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/rust-atomicwrites-043ab48/.\" \"cargo/vendor/atomicwrites\""
+            "rm -rf \"cargo/vendor/atomicwrites/.git\" && cp -r --reflink=auto \"flatpak-cargo/git/rust-atomicwrites-043ab48/.\" \"cargo/vendor/atomicwrites\" && rm -rf \"cargo/vendor/atomicwrites/.git\""
         ]
     },
     {
@@ -1369,7 +1369,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/freedesktop-icons-ab4c57b/.\" \"cargo/vendor/cosmic-freedesktop-icons\""
+            "rm -rf \"cargo/vendor/cosmic-freedesktop-icons/.git\" && cp -r --reflink=auto \"flatpak-cargo/git/freedesktop-icons-ab4c57b/.\" \"cargo/vendor/cosmic-freedesktop-icons\" && rm -rf \"cargo/vendor/cosmic-freedesktop-icons/.git\""
         ]
     },
     {
@@ -1405,7 +1405,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/cosmic-protocols-32283d7/.\" \"cargo/vendor/cosmic-protocols\""
+            "rm -rf \"cargo/vendor/cosmic-protocols/.git\" && cp -r --reflink=auto \"flatpak-cargo/git/cosmic-protocols-32283d7/.\" \"cargo/vendor/cosmic-protocols\" && rm -rf \"cargo/vendor/cosmic-protocols/.git\""
         ]
     },
     {
@@ -1423,7 +1423,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/cosmic-protocols-c0cff4d/.\" \"cargo/vendor/cosmic-protocols\""
+            "rm -rf \"cargo/vendor/cosmic-protocols/.git\" && cp -r --reflink=auto \"flatpak-cargo/git/cosmic-protocols-c0cff4d/.\" \"cargo/vendor/cosmic-protocols\" && rm -rf \"cargo/vendor/cosmic-protocols/.git\""
         ]
     },
     {
@@ -1542,7 +1542,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/cryoglyph-e429a02/.\" \"cargo/vendor/cryoglyph\""
+            "rm -rf \"cargo/vendor/cryoglyph/.git\" && cp -r --reflink=auto \"flatpak-cargo/git/cryoglyph-e429a02/.\" \"cargo/vendor/cryoglyph\" && rm -rf \"cargo/vendor/cryoglyph/.git\""
         ]
     },
     {
@@ -3676,7 +3676,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/libcosmic-7e82198/.\" \"cargo/vendor/libcosmic\""
+            "rm -rf \"cargo/vendor/libcosmic/.git\" && cp -r --reflink=auto \"flatpak-cargo/git/libcosmic-7e82198/.\" \"cargo/vendor/libcosmic\" && rm -rf \"cargo/vendor/libcosmic/.git\""
         ]
     },
     {
@@ -5909,7 +5909,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/smithay-clipboard-859b02c/.\" \"cargo/vendor/smithay-clipboard\""
+            "rm -rf \"cargo/vendor/smithay-clipboard/.git\" && cp -r --reflink=auto \"flatpak-cargo/git/smithay-clipboard-859b02c/.\" \"cargo/vendor/smithay-clipboard\" && rm -rf \"cargo/vendor/smithay-clipboard/.git\""
         ]
     },
     {
@@ -5953,7 +5953,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/softbuffer-c2b2c19/.\" \"cargo/vendor/softbuffer\""
+            "rm -rf \"cargo/vendor/softbuffer/.git\" && cp -r --reflink=auto \"flatpak-cargo/git/softbuffer-c2b2c19/.\" \"cargo/vendor/softbuffer\" && rm -rf \"cargo/vendor/softbuffer/.git\""
         ]
     },
     {
@@ -7271,7 +7271,7 @@
     {
         "type": "shell",
         "commands": [
-            "cp -r --reflink=auto \"flatpak-cargo/git/window_clipboard-f68595e/.\" \"cargo/vendor/window_clipboard\""
+            "rm -rf \"cargo/vendor/window_clipboard/.git\" && cp -r --reflink=auto \"flatpak-cargo/git/window_clipboard-f68595e/.\" \"cargo/vendor/window_clipboard\" && rm -rf \"cargo/vendor/window_clipboard/.git\""
         ]
     },
     {

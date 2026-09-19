@@ -10,8 +10,10 @@ that failure immediate and actionable without touching the network.
 
 from __future__ import annotations
 
+import argparse
 import ast
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -21,6 +23,11 @@ ROOT = Path(__file__).resolve().parents[1]
 LOCK_FILE = ROOT / "Cargo.lock"
 DEFAULT_SOURCES_FILE = ROOT / "cargo-sources.json"
 CRATES_IO_SOURCE = "registry+https://github.com/rust-lang/crates.io-index"
+GIT_ROOT_COPY_RE = re.compile(
+    r'^(?:rm -rf "[^"]+/\.git" && )?'
+    r'cp -r --reflink=auto "(?P<src>[^"]+)/\." "(?P<dest>[^"]+)"'
+    r'(?: && rm -rf "[^"]+/\.git")?$'
+)
 
 
 def display_path(path: Path) -> str:
@@ -146,6 +153,86 @@ def load_sources(
     return archives, inline_checksums
 
 
+def git_root_copy_strip_command(dest: str) -> str:
+    return f'rm -rf "{dest}/.git"'
+
+
+def rewrite_git_root_copy_command(command: str) -> str:
+    match = GIT_ROOT_COPY_RE.match(command)
+    if match is None:
+        return command
+
+    dest = match.group("dest")
+    src = match.group("src")
+    strip = git_root_copy_strip_command(dest)
+    return (
+        f"{strip} && "
+        f'cp -r --reflink=auto "{src}/." "{dest}" && '
+        f"{strip}"
+    )
+
+
+def rewrite_git_root_copies(sources_file: Path) -> int:
+    text = sources_file.read_text(encoding="utf-8")
+    data = json.loads(text)
+    replacements: list[tuple[str, str]] = []
+
+    for entry in iter_source_entries(data):
+        commands = entry.get("commands")
+        if not isinstance(commands, list):
+            continue
+        for command in commands:
+            if not isinstance(command, str):
+                continue
+            rewritten = rewrite_git_root_copy_command(command)
+            if rewritten != command:
+                replacements.append((command, rewritten))
+
+    if not replacements:
+        return 0
+
+    new_text = text
+    for old, new in replacements:
+        old_json = json.dumps(old)
+        new_json = json.dumps(new)
+        if old_json not in new_text:
+            raise ValueError(
+                f"unable to rewrite git-root copy command {old!r} in "
+                f"{display_path(sources_file)}"
+            )
+        new_text = new_text.replace(old_json, new_json, 1)
+
+    sources_file.write_text(new_text, encoding="utf-8")
+    return len(replacements)
+
+
+def check_git_root_copies(sources_file: Path) -> list[str]:
+    problems: list[str] = []
+    entries = iter_source_entries(
+        json.loads(sources_file.read_text(encoding="utf-8"))
+    )
+
+    for entry in entries:
+        if entry.get("type") != "shell":
+            continue
+        commands = entry.get("commands")
+        if not isinstance(commands, list):
+            continue
+        for command in commands:
+            if not isinstance(command, str):
+                continue
+            match = GIT_ROOT_COPY_RE.match(command)
+            if match is None:
+                continue
+            dest = match.group("dest")
+            if git_root_copy_strip_command(dest) not in command:
+                problems.append(
+                    f"git-root copy leaves .git in {dest}: {command}"
+                )
+
+    return problems
+
+
 def check_sources(sources_file: Path) -> list[str]:
     problems: list[str] = []
 
@@ -157,6 +244,8 @@ def check_sources(sources_file: Path) -> list[str]:
             f"{display_path(sources_file)} is missing; "
             "run ./generate-cargo-sources.sh"
         ]
+
+    problems.extend(check_git_root_copies(sources_file))
 
     archives, inline_checksums = load_sources(sources_file)
 
@@ -200,14 +289,36 @@ def check_sources(sources_file: Path) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) > 2:
-        print(
-            "usage: python3 scripts/check-cargo-sources.py [cargo-sources.json]",
-            file=sys.stderr,
-        )
-        return 2
+    parser = argparse.ArgumentParser(
+        description="Verify or rewrite Flatpak cargo-sources.json."
+    )
+    parser.add_argument(
+        "sources_file",
+        nargs="?",
+        help="Path to cargo-sources.json (defaults to the repo file)",
+    )
+    parser.add_argument(
+        "--rewrite",
+        action="store_true",
+        help="Strip .git from git-root vendor copies, then check the file",
+    )
+    args = parser.parse_args(argv[1:])
 
-    sources_file = resolve_sources_file(argv[1] if len(argv) == 2 else None)
+    sources_file = resolve_sources_file(args.sources_file)
+    if args.rewrite:
+        if not sources_file.exists():
+            print(
+                f"{display_path(sources_file)} is missing; "
+                "run ./generate-cargo-sources.sh",
+                file=sys.stderr,
+            )
+            return 1
+        rewritten = rewrite_git_root_copies(sources_file)
+        print(
+            f"Rewrote {rewritten} git-root vendor copy command(s) in "
+            f"{display_path(sources_file)}"
+        )
+
     problems = check_sources(sources_file)
     if problems:
         print(
