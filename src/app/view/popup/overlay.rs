@@ -29,26 +29,25 @@ pub(super) fn text_overlay_layer(text: String) -> Element<'static, Message> {
             widget::tooltip::Position::Top,
         ));
 
-    cosmic::iced::widget::opaque(
-        widget::container(
-            widget::column::Column::new()
-                .spacing(8)
+    widget::container(
+        widget::column::Column::new()
+            .spacing(8)
+            .height(Length::Fill)
+            .push(header)
+            .push(widget::divider::horizontal::default())
+            .push(
+                widget::scrollable(
+                    widget::container(widget::text::body(text).width(Length::Fill))
+                        .width(Length::Fill),
+                )
+                .id(crate::app::text_overlay_scroll_id())
                 .height(Length::Fill)
-                .push(header)
-                .push(widget::divider::horizontal::default())
-                .push(
-                    widget::scrollable(
-                        widget::container(widget::text::body(text).width(Length::Fill))
-                            .width(Length::Fill),
-                    )
-                    .id(crate::app::text_overlay_scroll_id())
-                    .height(Length::Fill)
-                    .width(Length::Fill),
-                ),
-        )
-        .class(cosmic::theme::Container::Card)
-        .padding([10, 12])
-        .height(Length::Fill)
-        .width(Length::Fill),
+                .width(Length::Fill),
+            ),
     )
+    .class(cosmic::theme::Container::Card)
+    .padding([10, 12])
+    .height(Length::Fill)
+    .width(Length::Fill)
+    .into()
 }

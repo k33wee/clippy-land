@@ -107,9 +107,9 @@ After enabling the wrapper:
 
 ## Most useful log lines
 
-- `ipc toggle signal written ...`
-- `ipc toggle signal detected after ...`
-- `ipc toggle message delivered to applet`
+- `ipc D-Bus toggle service ready`
+- `ipc D-Bus toggle completed in ...`
+- `ipc D-Bus toggle delivered to applet`
 - `popup requested via ...`
 - `popup window opened via ...`
 - `first popup redraw observed ...`

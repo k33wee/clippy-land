@@ -58,69 +58,16 @@ pub(super) fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
     let build_started = Instant::now();
     let visible = filtered_indices(app);
     let mut visible_image_count = 0usize;
-    let mut history_column = widget::column::Column::new().spacing(4);
-
-    if app.history.is_empty() {
-        history_column = history_column.push(
-            widget::container(widget::text::body(fl!("empty")))
-                .width(Length::Fill)
-                .center_x(Length::Fill),
-        );
-    } else if visible.is_empty() {
-        history_column = history_column.push(
-            widget::container(widget::text::body(fl!("no-results")))
-                .width(Length::Fill)
-                .center_x(Length::Fill),
-        );
-    } else {
-        let pinned_count = app.history.iter().filter(|it| it.pinned).count();
-
-        for &idx in &visible {
-            if app.search_query.is_empty()
-                && idx == pinned_count
-                && pinned_count > 0
-                && pinned_count < app.history.len()
-            {
-                history_column = history_column.push(widget::divider::horizontal::default());
-            }
-
-            let row_state = RowRenderState::from_app(app, idx, &app.history[idx]);
-            if matches!(row_state.content, RowContent::Image { .. }) {
-                visible_image_count += 1;
-            }
-            history_column = history_column.push(history_row(row_state));
-        }
-    }
-
-    let history_scrollable = widget::container(
-        widget::scrollable(
-            widget::container(history_column)
-                .padding([0, 12, 0, 12])
-                .width(Length::Fill),
-        )
-        .id(crate::app::history_scroll_id())
-        .on_scroll(Message::HistoryScrolled)
-        .width(Length::Fill),
-    )
-    .max_height(400.0)
-    .clip(true)
-    .width(Length::Fill);
 
     let history_area: Element<'_, Message> =
         if let Some(text_overlay) = selected_text_overlay(app, &visible) {
-            widget::container(
-                cosmic::iced::widget::stack([
-                    history_scrollable.into(),
-                    overlay::text_overlay_layer(text_overlay),
-                ])
+            visible_image_count = count_visible_images(app, &visible);
+            widget::container(overlay::text_overlay_layer(text_overlay))
                 .width(Length::Fill)
-                .height(Length::Fill),
-            )
-            .width(Length::Fill)
-            .height(380.0)
-            .into()
+                .height(380.0)
+                .into()
         } else {
-            history_scrollable.into()
+            history_scrollable_area(app, &visible, &mut visible_image_count)
         };
 
     let search_bar = widget::container(
@@ -220,4 +167,71 @@ pub(super) fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
     app.note_popup_view_built(visible.len(), visible_image_count, build_started.elapsed());
 
     app.core.applet.popup_container(content).into()
+}
+
+fn count_visible_images(app: &AppModel, visible: &[usize]) -> usize {
+    visible
+        .iter()
+        .filter(|&&idx| {
+            matches!(
+                app.history.get(idx).map(|item| &item.entry),
+                Some(crate::services::clipboard::ClipboardEntry::Image { .. })
+            )
+        })
+        .count()
+}
+
+fn history_scrollable_area<'a>(
+    app: &'a AppModel,
+    visible: &[usize],
+    visible_image_count: &mut usize,
+) -> Element<'a, Message> {
+    let mut history_column = widget::column::Column::new().spacing(4);
+
+    if app.history.is_empty() {
+        history_column = history_column.push(
+            widget::container(widget::text::body(fl!("empty")))
+                .width(Length::Fill)
+                .center_x(Length::Fill),
+        );
+    } else if visible.is_empty() {
+        history_column = history_column.push(
+            widget::container(widget::text::body(fl!("no-results")))
+                .width(Length::Fill)
+                .center_x(Length::Fill),
+        );
+    } else {
+        let pinned_count = app.history.iter().filter(|it| it.pinned).count();
+
+        for &idx in visible {
+            if app.search_query.is_empty()
+                && idx == pinned_count
+                && pinned_count > 0
+                && pinned_count < app.history.len()
+            {
+                history_column = history_column.push(widget::divider::horizontal::default());
+            }
+
+            let row_state = RowRenderState::from_app(app, idx, &app.history[idx]);
+            if matches!(row_state.content, RowContent::Image { .. }) {
+                *visible_image_count += 1;
+            }
+            history_column = history_column.push(history_row(row_state));
+        }
+    }
+
+    widget::container(
+        widget::scrollable(
+            widget::container(history_column)
+                .padding([0, 12, 0, 12])
+                .width(Length::Fill),
+        )
+        .id(crate::app::history_scroll_id())
+        .on_scroll(Message::HistoryScrolled)
+        .width(Length::Fill),
+    )
+    .max_height(400.0)
+    .clip(true)
+    .width(Length::Fill)
+    .into()
 }

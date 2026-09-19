@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 APP_BIN="${APP_BIN:-$ROOT_DIR/target/debug/cosmic-applet-clippy-land}"
-SIGNAL_FILE="${SIGNAL_FILE:-/tmp/clippy-land-e2e-toggle-$$.signal}"
 LOG_FILE="${LOG_FILE:-/tmp/clippy-land-e2e-$$.log}"
+export CLIPPY_LAND_BUS_NAME="${CLIPPY_LAND_BUS_NAME:-io.github.k33wee.ClippyLand.E2e$$}"
 
 POLL_SETTLE_SECONDS="${POLL_SETTLE_SECONDS:-1.2}"
 TOGGLE_SETTLE_SECONDS="${TOGGLE_SETTLE_SECONDS:-0.6}"
@@ -27,7 +27,7 @@ cleanup() {
         kill "$APP_PID" >/dev/null 2>&1 || true
         wait "$APP_PID" >/dev/null 2>&1 || true
     fi
-    rm -f "$SIGNAL_FILE" "$TMP_RED_PNG" "$TMP_BLUE_PNG"
+    rm -f "$TMP_RED_PNG" "$TMP_BLUE_PNG"
     if [[ $exit_code -ne 0 ]]; then
         printf '\nE2E failed. App log: %s\n' "$LOG_FILE" >&2
     fi
@@ -99,13 +99,11 @@ make_png_from_base64 "$BLUE_B64" "$TMP_BLUE_PNG"
 
 trap cleanup EXIT
 
-rm -f "$SIGNAL_FILE"
-
 printf 'Building debug binary...\n'
 cargo build >/dev/null
 
 printf 'Launching app instance for E2E...\n'
-CLIPPY_LAND_SIGNAL_FILE="$SIGNAL_FILE" "$APP_BIN" --no-standalone >"$LOG_FILE" 2>&1 &
+"$APP_BIN" --no-standalone >"$LOG_FILE" 2>&1 &
 APP_PID=$!
 
 sleep 1

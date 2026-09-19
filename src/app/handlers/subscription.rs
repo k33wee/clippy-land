@@ -34,7 +34,7 @@ pub(super) fn subscription(app: &AppModel) -> Subscription<Message> {
                 }
             })
         }),
-        ipc::signal_file_watcher(),
+        ipc::toggle_watcher(),
     ];
 
     if app.popup.is_some() {

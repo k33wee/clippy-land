@@ -66,7 +66,7 @@ You might need to log out and back in to see the applet in the list of available
 
 ## Keyboard Shortcut
 
-You can open the clipboard history with a keyboard shortcut via the `--toggle` flag.
+You can open the clipboard history with a keyboard shortcut via the `--toggle` flag. The command uses the session D-Bus to notify the running applet without background polling.
 
 Go to **COSMIC Settings → Keyboard → Custom Shortcuts**, add a new shortcut with:
 
