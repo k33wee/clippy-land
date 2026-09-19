@@ -11,6 +11,9 @@ use wl_clipboard_rs::{
     paste::{ClipboardType, MimeType as PasteMimeType, Seat, get_contents},
 };
 
+const MAX_TEXT_BYTES: usize = 16 * 1024 * 1024;
+const MAX_URI_LIST_BYTES: usize = 1024 * 1024;
+
 pub fn read_clipboard_entry() -> Option<ClipboardEntry> {
     super::read_clipboard_image()
         .or_else(read_clipboard_image_from_uri_list)
@@ -24,7 +27,7 @@ pub fn read_clipboard_text() -> Option<String> {
         PasteMimeType::Text,
     );
 
-    let (mut pipe, _) = match result {
+    let (pipe, _) = match result {
         Ok(ok) => ok,
         Err(err) => {
             debug_log(format!("clipboard read get_contents error: {err:?}"));
@@ -33,8 +36,13 @@ pub fn read_clipboard_text() -> Option<String> {
     };
 
     let mut bytes = Vec::new();
-    if let Err(err) = pipe.read_to_end(&mut bytes) {
+    let mut limited = pipe.take((MAX_TEXT_BYTES + 1) as u64);
+    if let Err(err) = limited.read_to_end(&mut bytes) {
         debug_log(format!("clipboard read pipe error: {err:?}"));
+        return None;
+    }
+    if bytes.len() > MAX_TEXT_BYTES {
+        debug_log("clipboard read text too large");
         return None;
     }
 
@@ -134,9 +142,13 @@ fn read_clipboard_image_from_uri_list() -> Option<ClipboardEntry> {
         PasteMimeType::Specific("text/uri-list"),
     );
 
-    let (mut pipe, _) = result.ok()?;
+    let (pipe, _) = result.ok()?;
     let mut bytes = Vec::new();
-    if pipe.read_to_end(&mut bytes).is_err() {
+    let mut limited = pipe.take((MAX_URI_LIST_BYTES + 1) as u64);
+    if limited.read_to_end(&mut bytes).is_err() {
+        return None;
+    }
+    if bytes.len() > MAX_URI_LIST_BYTES {
         return None;
     }
 

@@ -8,12 +8,49 @@ use std::hash::{Hash, Hasher};
 use std::io::Cursor;
 use std::path::Path;
 
+pub(super) fn is_valid_image_bytes(mime: &str, bytes: &[u8]) -> bool {
+    let max_dimension = max_image_dimension_px();
+    match mime {
+        "image/png" => {
+            let decoder = png::Decoder::new(Cursor::new(bytes));
+            if let Ok(reader) = decoder.read_info() {
+                let info = reader.info();
+                info.width > 0
+                    && info.height > 0
+                    && info.width <= max_dimension
+                    && info.height <= max_dimension
+            } else {
+                false
+            }
+        }
+        "image/jpeg" => {
+            let reader =
+                image::ImageReader::with_format(Cursor::new(bytes), image::ImageFormat::Jpeg);
+            if let Ok((w, h)) = reader.into_dimensions() {
+                w > 0 && h > 0 && w <= max_dimension && h <= max_dimension
+            } else {
+                false
+            }
+        }
+        "image/webp" => {
+            let reader =
+                image::ImageReader::with_format(Cursor::new(bytes), image::ImageFormat::WebP);
+            if let Ok((w, h)) = reader.into_dimensions() {
+                w > 0 && h > 0 && w <= max_dimension && h <= max_dimension
+            } else {
+                false
+            }
+        }
+        _ => false,
+    }
+}
+
 pub(super) fn clipboard_entry_from_image_bytes(
     mime: String,
     bytes: Vec<u8>,
 ) -> Option<ClipboardEntry> {
     let max_image_bytes = max_image_bytes();
-    if bytes.is_empty() || bytes.len() > max_image_bytes {
+    if bytes.is_empty() || bytes.len() > max_image_bytes || !is_valid_image_bytes(&mime, &bytes) {
         return None;
     }
 

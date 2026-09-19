@@ -890,6 +890,7 @@ dependencies = [
  "os_pipe",
  "png 0.18.1",
  "rust-embed",
+ "rustix 0.38.44",
  "serde",
  "tokio",
  "toml 0.9.12+spec-1.1.0",
