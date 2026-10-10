@@ -81,8 +81,14 @@ pub(super) fn view_window(app: &AppModel, _id: Id) -> Element<'_, Message> {
     let mut content = widget::column::Column::new().spacing(8).padding([8, 8]);
 
     if app.settings_open {
-        let settings_form = settings::settings_panel(app);
-        content = content.push(widget::container(settings_form).padding([0, 12]));
+        let settings_form = widget::scrollable(
+            widget::container(settings::settings_panel(app))
+                .padding([0, 12])
+                .width(Length::Fill),
+        )
+        .width(Length::Fill)
+        .height(Length::Fill);
+        content = content.push(settings_form);
     } else {
         if !app.history.is_empty() {
             content = content.push(search_bar);

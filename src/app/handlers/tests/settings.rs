@@ -1,5 +1,7 @@
 use super::*;
 
+static CONFIG_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[test]
 fn toggle_settings_panel_opens_and_prefills_draft() {
     let mut app = AppModel {
@@ -101,6 +103,7 @@ fn apply_settings_rejects_image_bytes_below_minimum() {
 
 #[test]
 fn apply_settings_updates_runtime_settings_and_closes_panel() {
+    let _env_guard = CONFIG_ENV_LOCK.lock().expect("config env lock");
     let unique = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .expect("time should be after unix epoch")
@@ -129,6 +132,46 @@ fn apply_settings_updates_runtime_settings_and_closes_panel() {
     let persisted = std::fs::read_to_string(&cfg_path).expect("settings should be written");
     assert!(persisted.contains("max_history = 350"));
     assert!(persisted.contains("max_pinned = 30"));
+
+    let _ = std::fs::remove_file(cfg_path);
+    unsafe { std::env::remove_var("CLIPPY_LAND_CONFIG") };
+}
+
+#[test]
+fn behavior_toggles_update_and_persist_settings() {
+    let _env_guard = CONFIG_ENV_LOCK.lock().expect("config env lock");
+    let unique = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("time should be after unix epoch")
+        .as_nanos();
+    let cfg_path =
+        std::env::temp_dir().join(format!("clippy-land-test-behavior-settings-{unique}.toml"));
+    unsafe { std::env::set_var("CLIPPY_LAND_CONFIG", &cfg_path) };
+
+    let mut app = AppModel::default();
+    assert!(app.settings.paste_on_action);
+    assert!(app.settings.close_popup_on_action);
+
+    dispatch(&mut app, Message::SettingsClosePopupOnActionToggled(false));
+    assert!(!app.settings.paste_on_action);
+    assert!(!app.settings.close_popup_on_action);
+
+    dispatch(&mut app, Message::SettingsPasteOnActionToggled(true));
+    assert!(app.settings.paste_on_action);
+    assert!(app.settings.close_popup_on_action);
+
+    dispatch(&mut app, Message::SettingsPasteOnActionToggled(false));
+    assert!(!app.settings.paste_on_action);
+    assert!(app.settings.close_popup_on_action);
+
+    dispatch(&mut app, Message::SettingsClosePopupOnActionToggled(false));
+    assert!(!app.settings.paste_on_action);
+    assert!(!app.settings.close_popup_on_action);
+    assert!(app.settings_error.is_none());
+
+    let persisted = std::fs::read_to_string(&cfg_path).expect("settings should be written");
+    assert!(persisted.contains("paste_on_action = false"));
+    assert!(persisted.contains("close_popup_on_action = false"));
 
     let _ = std::fs::remove_file(cfg_path);
     unsafe { std::env::remove_var("CLIPPY_LAND_CONFIG") };

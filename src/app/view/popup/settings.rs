@@ -69,6 +69,33 @@ pub(super) fn settings_panel(app: &AppModel) -> Element<'_, Message> {
             .push(image_dimension),
     );
 
+    col = col.push(widget::divider::horizontal::light());
+    col = col.push(widget::text::caption("Behavior"));
+
+    let paste_on_action = widget::column::Column::new()
+        .spacing(4)
+        .push(
+            widget::toggler(app.settings.paste_on_action)
+                .label("Paste into the active app after selection".to_string())
+                .on_toggle(Message::SettingsPasteOnActionToggled),
+        )
+        .push(widget::text::caption(
+            "After Enter or a click, closes the popup and sends Ctrl+V once focus returns to the previous app. Falls back to copy-only when virtual keyboard access is unavailable.",
+        ));
+
+    let close_popup_on_action = widget::column::Column::new()
+        .spacing(4)
+        .push(
+            widget::toggler(app.settings.close_popup_on_action)
+                .label("Close popup after selection".to_string())
+                .on_toggle(Message::SettingsClosePopupOnActionToggled),
+        )
+        .push(widget::text::caption(
+            "Closes the clipboard popup after an entry is copied or pasted. Disabling this also disables auto-paste.",
+        ));
+
+    col = col.push(paste_on_action).push(close_popup_on_action);
+
     if let Some(err) = &app.settings_error {
         col = col.push(widget::text::body(err));
     }

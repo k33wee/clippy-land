@@ -93,16 +93,34 @@ pub(super) fn toggle_pin(
 
 pub(super) fn copy_history_item(
     item: &HistoryItem,
+    paste_after_copy: bool,
 ) -> cosmic::iced::Task<cosmic::Action<crate::app::Message>> {
-    copy_clipboard_entry(&item.entry)
+    copy_clipboard_entry(&item.entry, paste_after_copy)
 }
 
 pub(super) fn copy_clipboard_entry(
     entry: &ClipboardEntry,
+    paste_after_copy: bool,
 ) -> cosmic::iced::Task<cosmic::Action<crate::app::Message>> {
     use cosmic::prelude::*;
 
     match entry {
+        ClipboardEntry::Text(text) if paste_after_copy => {
+            let text = text.clone();
+            Task::perform(
+                async move {
+                    let write_succeeded =
+                        tokio::task::spawn_blocking(move || clipboard::write_clipboard_text(&text))
+                            .await
+                            .unwrap_or(false);
+
+                    if write_succeeded {
+                        crate::services::keyboard::delayed_ctrl_v().await;
+                    }
+                },
+                |_| cosmic::Action::None,
+            )
+        }
         ClipboardEntry::Text(text) => {
             _ = clipboard::write_clipboard_text(text);
             Task::none()
@@ -112,10 +130,15 @@ pub(super) fn copy_clipboard_entry(
             let bytes = bytes.clone();
             Task::perform(
                 async move {
-                    _ = tokio::task::spawn_blocking(move || {
+                    let write_succeeded = tokio::task::spawn_blocking(move || {
                         clipboard::write_owned_clipboard_image(mime, bytes)
                     })
-                    .await;
+                    .await
+                    .unwrap_or(false);
+
+                    if paste_after_copy && write_succeeded {
+                        crate::services::keyboard::delayed_ctrl_v().await;
+                    }
                 },
                 |_| cosmic::Action::None,
             )

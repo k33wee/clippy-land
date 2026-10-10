@@ -39,6 +39,10 @@ pub enum Message {
     SettingsMaxPinnedChanged(String),
     SettingsMaxImageBytesChanged(String),
     SettingsMaxImageDimensionChanged(String),
+    /// Paste selected entries into the previously focused app.
+    SettingsPasteOnActionToggled(bool),
+    /// Close the clipboard popup after an entry action.
+    SettingsClosePopupOnActionToggled(bool),
     ApplySettings,
     /// Keyboard vertical navigation, resolved by current UI state.
     KeyboardNavigateUp,

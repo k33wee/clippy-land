@@ -1,3 +1,4 @@
+mod actions;
 mod clipboard;
 mod history_limits;
 mod hover;

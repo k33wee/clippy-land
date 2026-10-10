@@ -33,6 +33,40 @@ pub(super) fn handle(app: &mut AppModel, message: Message) -> bool {
             app.settings_draft.max_image_dimension_px = value;
             true
         }
+        Message::SettingsPasteOnActionToggled(enabled) => {
+            let mut updated = app.settings.clone();
+            updated.paste_on_action = enabled;
+            if enabled {
+                updated.close_popup_on_action = true;
+            }
+            match updated.save() {
+                Ok(()) => {
+                    app.settings = updated;
+                    app.settings_error = None;
+                }
+                Err(err) => {
+                    app.settings_error = Some(format!("Failed to save settings: {err}"));
+                }
+            }
+            true
+        }
+        Message::SettingsClosePopupOnActionToggled(enabled) => {
+            let mut updated = app.settings.clone();
+            updated.close_popup_on_action = enabled;
+            if !enabled {
+                updated.paste_on_action = false;
+            }
+            match updated.save() {
+                Ok(()) => {
+                    app.settings = updated;
+                    app.settings_error = None;
+                }
+                Err(err) => {
+                    app.settings_error = Some(format!("Failed to save settings: {err}"));
+                }
+            }
+            true
+        }
         Message::ApplySettings => {
             let max_history = match parse_usize_field(&app.settings_draft.max_history) {
                 Ok(v) => v,
@@ -111,6 +145,8 @@ pub(super) fn handle(app: &mut AppModel, message: Message) -> bool {
 
             let updated = AppSettings {
                 schema_version: 1,
+                paste_on_action: app.settings.paste_on_action,
+                close_popup_on_action: app.settings.close_popup_on_action,
                 max_history,
                 max_pinned,
                 max_image_bytes,

@@ -7,6 +7,10 @@ use std::path::{Path, PathBuf};
 #[serde(default)]
 pub struct AppSettings {
     pub schema_version: u8,
+    /// Paste the selected clipboard entry into the previously focused app.
+    pub paste_on_action: bool,
+    /// Close the popup after copying or pasting an entry.
+    pub close_popup_on_action: bool,
     pub max_history: usize,
     pub max_pinned: usize,
     pub max_image_bytes: usize,
@@ -17,6 +21,8 @@ impl Default for AppSettings {
     fn default() -> Self {
         Self {
             schema_version: 1,
+            paste_on_action: true,
+            close_popup_on_action: true,
             max_history: 200,
             max_pinned: 20,
             max_image_bytes: 8 * 1024 * 1024,
@@ -37,6 +43,11 @@ impl AppSettings {
 
     pub fn normalized(mut self) -> Self {
         self.schema_version = 1;
+        if self.paste_on_action {
+            // Auto-paste relies on closing the popup first so focus can return
+            // to the previously active application.
+            self.close_popup_on_action = true;
+        }
         self.max_history = self.max_history.clamp(Self::MIN_HISTORY, Self::MAX_HISTORY);
         self.max_pinned = self.max_pinned.clamp(Self::MIN_PINNED, Self::MAX_PINNED);
         self.max_pinned = self.max_pinned.min(self.max_history);
@@ -120,6 +131,8 @@ mod tests {
         let settings = AppSettings::default().normalized();
 
         assert_eq!(settings.schema_version, 1);
+        assert!(settings.paste_on_action);
+        assert!(settings.close_popup_on_action);
         assert!(settings.max_history >= AppSettings::MIN_HISTORY);
         assert!(settings.max_history <= AppSettings::MAX_HISTORY);
         assert!(settings.max_pinned <= settings.max_history);
@@ -133,6 +146,8 @@ mod tests {
     fn normalization_clamps_and_relates_fields() {
         let raw = AppSettings {
             schema_version: 9,
+            paste_on_action: false,
+            close_popup_on_action: false,
             max_history: 1,
             max_pinned: 9999,
             max_image_bytes: 1,
@@ -142,6 +157,8 @@ mod tests {
         let normalized = raw.normalized();
 
         assert_eq!(normalized.schema_version, 1);
+        assert!(!normalized.paste_on_action);
+        assert!(!normalized.close_popup_on_action);
         assert_eq!(normalized.max_history, AppSettings::MIN_HISTORY);
         assert_eq!(normalized.max_pinned, AppSettings::MIN_HISTORY);
         assert_eq!(normalized.max_image_bytes, AppSettings::MIN_IMAGE_BYTES);
@@ -149,6 +166,18 @@ mod tests {
             normalized.max_image_dimension_px,
             AppSettings::MAX_IMAGE_DIMENSION_PX
         );
+    }
+
+    #[test]
+    fn paste_on_action_requires_popup_close() {
+        let settings = AppSettings {
+            paste_on_action: true,
+            close_popup_on_action: false,
+            ..AppSettings::default()
+        }
+        .normalized();
+
+        assert!(settings.close_popup_on_action);
     }
 
     #[test]
@@ -161,6 +190,8 @@ mod tests {
 
         let settings = AppSettings {
             schema_version: 1,
+            paste_on_action: false,
+            close_popup_on_action: true,
             max_history: 333,
             max_pinned: 22,
             max_image_bytes: 2 * 1024 * 1024,

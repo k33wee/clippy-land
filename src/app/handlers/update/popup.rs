@@ -70,6 +70,14 @@ fn open_anchored_popup(app: &mut AppModel) -> Task<cosmic::Action<Message>> {
     crate::app::surfaces::open_anchored_popup(app)
 }
 
+pub(super) fn close_after_action(app: &mut AppModel) -> Task<cosmic::Action<Message>> {
+    if app.settings.close_popup_on_action {
+        close_popup(app, "entry action closed popup before first redraw")
+    } else {
+        Task::none()
+    }
+}
+
 fn close_popup(app: &mut AppModel, reason: &'static str) -> Task<cosmic::Action<Message>> {
     let Some(id) = app.popup.take() else {
         return Task::none();

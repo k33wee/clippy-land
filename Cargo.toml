@@ -21,7 +21,9 @@ toml = "1.1.8"
 wl-clipboard-rs = "0.9.4"
 wayland-client = "0.31.15"
 wayland-protocols = { version = "0.32.13", features = ["client"] }
+wayland-protocols-misc = { version = "0.3.12", features = ["client"] }
 wayland-protocols-wlr = { version = "0.3.12", features = ["client"] }
+xkbcommon = "0.8"
 zbus = "5.19"
 
 [dependencies.i18n-embed]

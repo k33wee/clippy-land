@@ -132,9 +132,7 @@ pub(super) fn handle(
             if let Some((idx, part)) = app.keyboard_focus {
                 match part {
                     FocusPart::Entry => {
-                        if let Some(item) = app.history.get(idx) {
-                            return Some(history::copy_history_item(item));
-                        }
+                        return Some(activate_entry(app, idx));
                     }
                     FocusPart::Preview => {
                         if row_has_preview(app, idx) {
@@ -157,10 +155,8 @@ pub(super) fn handle(
                         }
                     }
                 }
-            } else if let Some(idx) = app.hovered_index
-                && let Some(item) = app.history.get(idx)
-            {
-                return Some(history::copy_history_item(item));
+            } else if let Some(idx) = app.hovered_index {
+                return Some(activate_entry(app, idx));
             }
             Some(Task::none())
         }
@@ -174,4 +170,19 @@ pub(super) fn handle(
         }
         _ => None,
     }
+}
+
+fn activate_entry(app: &mut AppModel, index: usize) -> Task<cosmic::Action<Message>> {
+    if app.popup.is_none() {
+        return Task::none();
+    }
+
+    let paste_after_copy = app.settings.paste_on_action && app.settings.close_popup_on_action;
+    let Some(item) = app.history.get(index) else {
+        return Task::none();
+    };
+
+    let copy_task = history::copy_history_item(item, paste_after_copy);
+    let close_task = super::popup::close_after_action(app);
+    close_task.chain(copy_task)
 }
