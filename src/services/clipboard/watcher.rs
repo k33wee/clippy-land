@@ -12,7 +12,7 @@ use super::image::{
 use super::uri::parse_first_local_path_from_uri_list;
 use super::{ClipboardEntry, debug_log, max_image_bytes};
 use os_pipe::pipe;
-use rustix::event::{PollFd, PollFlags, poll};
+use rustix::event::{PollFd, PollFlags, Timespec, poll};
 use rustix::fs::{OFlags, fcntl_getfl, fcntl_setfl};
 use std::collections::HashMap;
 use std::io::Read;
@@ -269,6 +269,14 @@ const MAX_TEXT_BYTES: usize = 16 * 1024 * 1024;
 const MAX_URI_LIST_BYTES: usize = 1024 * 1024;
 const IMAGE_MIMES: [&str; 3] = ["image/png", "image/jpeg", "image/webp"];
 
+fn duration_to_timespec(duration: Duration) -> Timespec {
+    let nanos = duration.as_nanos().min(i64::MAX as u128) as i64;
+    Timespec {
+        tv_sec: nanos / 1_000_000_000,
+        tv_nsec: nanos % 1_000_000_000,
+    }
+}
+
 fn is_text_mime(mime: &str) -> bool {
     match mime {
         "TEXT" | "STRING" | "UTF8_STRING" => true,
@@ -288,11 +296,7 @@ fn is_text_mime(mime: &str) -> bool {
 
 fn ordered_text_mimes(mimes: &[String]) -> Vec<String> {
     let mut result = Vec::new();
-    const PREFERRED_TEXT: [&str; 3] = [
-        "text/plain;charset=utf-8",
-        "UTF8_STRING",
-        "text/plain",
-    ];
+    const PREFERRED_TEXT: [&str; 3] = ["text/plain;charset=utf-8", "UTF8_STRING", "text/plain"];
     for preferred in PREFERRED_TEXT {
         for mime in mimes {
             if mime.as_str() == preferred && !result.contains(mime) {
@@ -374,10 +378,7 @@ fn read_pipe_bounded(
             return None;
         }
         let remaining = timeout - elapsed;
-        let timeout_ms = remaining
-            .as_millis()
-            .min(i32::MAX as u128)
-            .max(1) as i32;
+        let timeout_spec = duration_to_timespec(remaining.max(Duration::from_millis(1)));
 
         if let (Some(st), Some(offer)) = (state.as_deref(), offer)
             && st.current.as_ref() != Some(offer)
@@ -402,26 +403,18 @@ fn read_pipe_bounded(
             guard = conn.and_then(|c| c.prepare_read());
         }
 
-        let pfd_pipe = PollFd::new(
-            &*reader,
-            PollFlags::IN | PollFlags::ERR | PollFlags::HUP,
-        );
+        let pfd_pipe = PollFd::new(&*reader, PollFlags::IN | PollFlags::ERR | PollFlags::HUP);
 
         let (poll_res, wayland_ready) = if let Some(ref g) = guard {
             let wayland_fd = g.connection_fd();
-            let pfd_wayland = PollFd::new(
-                &wayland_fd,
-                PollFlags::IN | PollFlags::ERR,
-            );
+            let pfd_wayland = PollFd::new(&wayland_fd, PollFlags::IN | PollFlags::ERR);
             let mut fds = [pfd_pipe, pfd_wayland];
-            let res = poll(&mut fds, timeout_ms);
-            let wayland_in = fds[1]
-                .revents()
-                .intersects(PollFlags::IN | PollFlags::ERR);
+            let res = poll(&mut fds, Some(&timeout_spec));
+            let wayland_in = fds[1].revents().intersects(PollFlags::IN | PollFlags::ERR);
             (res, wayland_in)
         } else {
             let mut fds = [pfd_pipe];
-            let res = poll(&mut fds, timeout_ms);
+            let res = poll(&mut fds, Some(&timeout_spec));
             (res, false)
         };
 
@@ -540,8 +533,7 @@ fn read_offer(
                 Some(queue),
                 Some(state),
                 Some(offer),
-            )
-                && let Ok(uris) = String::from_utf8(bytes)
+            ) && let Ok(uris) = String::from_utf8(bytes)
                 && let Some(path) = parse_first_local_path_from_uri_list(&uris)
                 && let Some(entry) = clipboard_entry_from_image_path(&path)
             {
@@ -571,8 +563,7 @@ fn read_offer(
             Some(queue),
             Some(state),
             Some(offer),
-        )
-            && let Ok(text) = String::from_utf8(bytes)
+        ) && let Ok(text) = String::from_utf8(bytes)
         {
             let text = text.trim_end_matches(['\n', '\r']).to_string();
             if !text.is_empty() {
@@ -597,12 +588,9 @@ fn drain_wayland_events(
         };
 
         let fd = guard.connection_fd();
-        let mut fds = [PollFd::new(
-            &fd,
-            PollFlags::IN | PollFlags::ERR,
-        )];
+        let mut fds = [PollFd::new(&fd, PollFlags::IN | PollFlags::ERR)];
 
-        match poll(&mut fds, 0) {
+        match poll(&mut fds, Some(&Timespec::default())) {
             Ok(n) if n > 0 => match guard.read() {
                 Ok(_) => continue,
                 Err(wayland_client::backend::WaylandError::Io(e))
@@ -684,9 +672,7 @@ pub fn run(sender: tokio::sync::mpsc::Sender<ClipboardEntry>) {
     }
 
     loop {
-        if state.pending.is_none()
-            && queue.blocking_dispatch(&mut state).is_err()
-        {
+        if state.pending.is_none() && queue.blocking_dispatch(&mut state).is_err() {
             break;
         }
         if let Some(Some(offer)) = state.pending.take() {
@@ -774,14 +760,8 @@ mod tests {
 
     #[test]
     fn chooses_extended_text_mimes_when_offered() {
-        assert_eq!(
-            choose_mime(&mimes(&["TEXT"])),
-            Some("TEXT".into())
-        );
-        assert_eq!(
-            choose_mime(&mimes(&["STRING"])),
-            Some("STRING".into())
-        );
+        assert_eq!(choose_mime(&mimes(&["TEXT"])), Some("TEXT".into()));
+        assert_eq!(choose_mime(&mimes(&["STRING"])), Some("STRING".into()));
         assert_eq!(
             choose_mime(&mimes(&["application/json"])),
             Some("application/json".into())
@@ -803,7 +783,9 @@ mod tests {
     #[test]
     fn read_pipe_bounded_reads_data_within_limit() {
         let (mut reader, mut writer) = pipe().expect("pipe should create");
-        writer.write_all(b"hello world").expect("write should succeed");
+        writer
+            .write_all(b"hello world")
+            .expect("write should succeed");
         drop(writer);
 
         let data = read_pipe_bounded(
@@ -821,7 +803,9 @@ mod tests {
     #[test]
     fn read_pipe_bounded_aborts_when_exceeding_max_bytes() {
         let (mut reader, mut writer) = pipe().expect("pipe should create");
-        writer.write_all(b"0123456789extra").expect("write should succeed");
+        writer
+            .write_all(b"0123456789extra")
+            .expect("write should succeed");
         drop(writer);
 
         let data = read_pipe_bounded(
@@ -847,11 +831,15 @@ mod tests {
         // Non-image URI returns None
         let parsed_path = parse_first_local_path_from_uri_list("file:///etc/hosts\n");
         assert!(parsed_path.is_some());
-        assert!(super::super::image::clipboard_entry_from_image_path(&parsed_path.unwrap()).is_none());
+        assert!(
+            super::super::image::clipboard_entry_from_image_path(&parsed_path.unwrap()).is_none()
+        );
 
         // Text parsing succeeds
         let text_bytes = b"fallback plain text content".to_vec();
-        let text = String::from_utf8(text_bytes).ok().map(|t| t.trim_end_matches(['\n', '\r']).to_string());
+        let text = String::from_utf8(text_bytes)
+            .ok()
+            .map(|t| t.trim_end_matches(['\n', '\r']).to_string());
         assert_eq!(text, Some("fallback plain text content".to_string()));
     }
 }
