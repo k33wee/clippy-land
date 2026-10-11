@@ -609,7 +609,7 @@ fn drain_wayland_events(
 /// Runs until the subscription is dropped.  There is one Wayland connection for the lifetime of
 /// this function; the current offer is read only after a `selection` event arrives.
 pub fn run(sender: tokio::sync::mpsc::Sender<ClipboardEntry>) {
-    let Ok(conn) = Connection::connect_to_env() else {
+    let Ok(conn) = crate::services::wayland::connection() else {
         debug_log("clipboard watcher: unable to connect to Wayland");
         return;
     };

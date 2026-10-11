@@ -6,20 +6,20 @@
 //! through a short-lived virtual keyboard so the freshly written clipboard
 //! contents land in that window.
 //!
-//! Not every environment allows this: the compositor must advertise the
-//! `zwp_virtual_keyboard_manager_v1` global.  In particular cosmic-comp only
-//! exposes it to non-sandboxed clients, so the Flatpak build gracefully
-//! degrades to copy-only (the error is logged and ignored by callers).
+//! The compositor must advertise `zwp_virtual_keyboard_manager_v1`. COSMIC
+//! permits it on the panel-granted privileged connection, including for Flatpak
+//! applets. Without that grant/protocol, selection gracefully remains copy-only.
 
 use std::fs::File;
 use std::io::Write;
 use std::os::fd::AsFd;
+use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
-use wayland_client::globals::{GlobalListContents, registry_queue_init};
+use wayland_client::globals::{GlobalList, GlobalListContents, registry_queue_init};
 use wayland_client::protocol::wl_registry::WlRegistry;
 use wayland_client::protocol::wl_seat::WlSeat;
-use wayland_client::{Connection, Dispatch, QueueHandle};
+use wayland_client::{Connection, Dispatch, EventQueue, QueueHandle};
 use wayland_protocols_misc::zwp_virtual_keyboard_v1::client::{
     zwp_virtual_keyboard_manager_v1::ZwpVirtualKeyboardManagerV1,
     zwp_virtual_keyboard_v1::ZwpVirtualKeyboardV1,
@@ -65,66 +65,125 @@ pub fn paste_delay() -> Duration {
         .unwrap_or_else(|| Duration::from_millis(DEFAULT_PASTE_DELAY_MS))
 }
 
+/// Bind once: the virtual-keyboard manager has no destructor, so rebinding it
+/// on every paste would leak objects on the shared, process-long connection.
+/// The mutex also prevents overlapping modifier/key sequences.
+static KEYBOARD: OnceLock<Mutex<Option<KeyboardClient>>> = OnceLock::new();
+
+struct KeyboardClient {
+    conn: Connection,
+    queue: EventQueue<KeyboardState>,
+    globals: GlobalList,
+    manager: Option<ZwpVirtualKeyboardManagerV1>,
+    seat: Option<WlSeat>,
+}
+
+impl KeyboardClient {
+    fn connect() -> Result<Self, String> {
+        let conn = super::wayland::connection()?;
+        let (globals, queue) = registry_queue_init::<KeyboardState>(&conn)
+            .map_err(|err| format!("registry: {err}"))?;
+        Ok(Self {
+            conn,
+            queue,
+            globals,
+            manager: None,
+            seat: None,
+        })
+    }
+
+    fn bind_keyboard(&mut self) -> Result<(), String> {
+        if self.manager.is_some() {
+            return Ok(());
+        }
+        // Refresh globals for retries, but retain every successful binding so
+        // neither missing protocols nor partial setup leak objects on retry.
+        self.queue
+            .roundtrip(&mut KeyboardState)
+            .map_err(|err| format!("registry refresh: {err}"))?;
+        let qh = self.queue.handle();
+        if self.seat.is_none() {
+            self.seat = Some(
+                self.globals
+                    .bind(&qh, 1..=7, ())
+                    .map_err(|err| format!("wl_seat bind: {err}"))?,
+            );
+        }
+        self.manager = Some(self.globals.bind(&qh, 1..=1, ()).map_err(|_| {
+            "zwp_virtual_keyboard_manager_v1 unavailable (unsupported compositor or sandboxed client)".to_string()
+        })?);
+        Ok(())
+    }
+
+    fn send_ctrl_v(&mut self) -> Result<(), String> {
+        self.bind_keyboard()?;
+        // Do fallible local work before creating a protocol object.
+        let (keymap_text, ctrl_mask) = compile_keymap_and_ctrl_mask()?;
+        let mut keymap_bytes = keymap_text.into_bytes();
+        // XKB text keymaps are NUL-terminated, including the advertised size.
+        keymap_bytes.push(0);
+        let keymap_file = create_memfd_with(&keymap_bytes)?;
+        let keyboard = self
+            .manager
+            .as_ref()
+            .expect("manager bound above")
+            .create_virtual_keyboard(
+                self.seat.as_ref().expect("seat bound above"),
+                &self.queue.handle(),
+                (),
+            );
+        keyboard.keymap(
+            KEYMAP_FORMAT_XKB_V1,
+            keymap_file.as_fd(),
+            keymap_bytes.len() as u32,
+        );
+
+        let result = self.send_keys(&keyboard, ctrl_mask);
+        // Destroy even if a roundtrip fails, rather than leaving a virtual
+        // keyboard (and possibly its Control modifier) alive.
+        keyboard.destroy();
+        self.conn
+            .flush()
+            .map_err(|err| format!("wayland flush: {err}"))?;
+        result
+    }
+
+    fn send_keys(&mut self, keyboard: &ZwpVirtualKeyboardV1, ctrl_mask: u32) -> Result<(), String> {
+        let mut state = KeyboardState;
+        self.queue
+            .roundtrip(&mut state)
+            .map_err(|err| format!("keymap roundtrip: {err}"))?;
+        let press_time = monotonic_ms();
+        keyboard.modifiers(ctrl_mask, 0, 0, 0);
+        keyboard.key(press_time, KEY_V, KEY_STATE_PRESSED);
+        self.queue
+            .roundtrip(&mut state)
+            .map_err(|err| format!("key press roundtrip: {err}"))?;
+        std::thread::sleep(Duration::from_millis(2));
+        keyboard.key(press_time + KEY_HOLD_MS, KEY_V, KEY_STATE_RELEASED);
+        keyboard.modifiers(0, 0, 0, 0);
+        self.queue
+            .roundtrip(&mut state)
+            .map_err(|err| format!("key release roundtrip: {err}"))?;
+        Ok(())
+    }
+}
+
 /// Injects Ctrl+V into the currently focused window. Blocking because it uses
 /// Wayland round-trips; intended for `spawn_blocking`.
 pub fn send_ctrl_v() -> Result<(), String> {
-    let conn = Connection::connect_to_env().map_err(|err| format!("wayland connect: {err}"))?;
-    let (globals, mut queue) =
-        registry_queue_init::<KeyboardState>(&conn).map_err(|err| format!("registry: {err}"))?;
-    let qh = queue.handle();
-
-    let manager: ZwpVirtualKeyboardManagerV1 = globals.bind(&qh, 1..=1, ()).map_err(|_| {
-        "zwp_virtual_keyboard_manager_v1 unavailable (unsupported compositor or sandboxed client)"
-            .to_string()
-    })?;
-
-    let seat: WlSeat = globals
-        .bind(&qh, 1..=7, ())
-        .map_err(|err| format!("wl_seat bind: {err}"))?;
-
-    let keyboard = manager.create_virtual_keyboard(&seat, &qh, ());
-
-    let (keymap_text, ctrl_mask) = compile_keymap_and_ctrl_mask()?;
-    let mut keymap_bytes = keymap_text.into_bytes();
-    // XKB text keymaps transported over Wayland are NUL-terminated and the
-    // terminator is included in the advertised size.
-    keymap_bytes.push(0);
-
-    // The compositor mmaps the keymap from the passed fd, so a memfd avoids
-    // touching the filesystem. Keep the file alive until the connection is
-    // flushed below.
-    let keymap_file = create_memfd_with(&keymap_bytes)?;
-    keyboard.keymap(
-        KEYMAP_FORMAT_XKB_V1,
-        keymap_file.as_fd(),
-        keymap_bytes.len() as u32,
-    );
-
-    let mut state = KeyboardState;
-    queue
-        .roundtrip(&mut state)
-        .map_err(|err| format!("keymap roundtrip: {err}"))?;
-
-    let press_time = monotonic_ms();
-    keyboard.modifiers(ctrl_mask, 0, 0, 0);
-    keyboard.key(press_time, KEY_V, KEY_STATE_PRESSED);
-    queue
-        .roundtrip(&mut state)
-        .map_err(|err| format!("key press roundtrip: {err}"))?;
-
-    std::thread::sleep(Duration::from_millis(2));
-
-    keyboard.key(press_time + KEY_HOLD_MS, KEY_V, KEY_STATE_RELEASED);
-    keyboard.modifiers(0, 0, 0, 0);
-    queue
-        .roundtrip(&mut state)
-        .map_err(|err| format!("key release roundtrip: {err}"))?;
-
-    keyboard.destroy();
-    conn.flush()
-        .map_err(|err| format!("wayland flush: {err}"))?;
-
-    Ok(())
+    let mut client = KEYBOARD
+        .get_or_init(|| Mutex::new(None))
+        .lock()
+        .map_err(|_| "virtual keyboard lock poisoned".to_string())?;
+    if client.is_none() {
+        // A failed connection must not permanently disable future pastes.
+        *client = Some(KeyboardClient::connect()?);
+    }
+    client
+        .as_mut()
+        .expect("keyboard initialized above")
+        .send_ctrl_v()
 }
 
 /// Sleeps the paste delay, then injects Ctrl+V.  Async counterpart used by the

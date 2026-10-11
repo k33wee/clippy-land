@@ -1,6 +1,7 @@
 mod image;
 mod io;
 mod model;
+mod publisher;
 mod uri;
 mod watcher;
 

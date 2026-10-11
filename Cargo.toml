@@ -39,7 +39,7 @@ default-features = false
 # See https://github.com/pop-os/libcosmic/blob/master/Cargo.toml for available features.
 features = [
     # COSMIC applet support. This pulls in the Wayland/winit/tokio/multi-window pieces needed by applets.
-    "applet-token",
+    "applet",
     # Uses cosmic-settings-daemon to watch for config file changes
     "dbus-config",
 ]

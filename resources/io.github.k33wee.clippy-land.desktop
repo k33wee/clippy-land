@@ -14,3 +14,4 @@ Categories=Utility;X-Cosmic;X-Iced;
 NoDisplay=true
 X-CosmicApplet=true
 X-CosmicHoverPopup=Auto
+X-HostWaylandDisplay=true

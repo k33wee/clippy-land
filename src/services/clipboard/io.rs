@@ -93,6 +93,9 @@ pub fn read_clipboard_image() -> Option<ClipboardEntry> {
 }
 
 pub fn write_clipboard_text(text: &str) -> bool {
+    if crate::services::wayland::has_privileged_connection() {
+        return super::publisher::copy_text(text);
+    }
     let opts = CopyOptions::new();
     match opts.copy(
         Source::Bytes(text.as_bytes().to_vec().into()),
@@ -107,6 +110,9 @@ pub fn write_clipboard_text(text: &str) -> bool {
 }
 
 pub fn write_clipboard_image(mime: &str, bytes: &[u8]) -> bool {
+    if crate::services::wayland::has_privileged_connection() {
+        return super::publisher::copy_image(mime.into(), bytes::Bytes::copy_from_slice(bytes));
+    }
     let opts = CopyOptions::new();
     match opts.copy(
         Source::Bytes(bytes.to_vec().into_boxed_slice()),
@@ -121,6 +127,9 @@ pub fn write_clipboard_image(mime: &str, bytes: &[u8]) -> bool {
 }
 
 pub fn write_owned_clipboard_image(mime: String, bytes: bytes::Bytes) -> bool {
+    if crate::services::wayland::has_privileged_connection() {
+        return super::publisher::copy_image(mime, bytes);
+    }
     let opts = CopyOptions::new();
     let bytes: Vec<u8> = bytes.into();
     match opts.copy(

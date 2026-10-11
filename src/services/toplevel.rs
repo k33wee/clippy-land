@@ -4,17 +4,14 @@
 //! currently focused toplevel is known, the popup can be placed next to where
 //! the user is working instead of a full-width strip at the top of the screen.
 //!
-//! This module runs a dedicated Wayland connection on a background thread that
-//! tracks the activated toplevel, its per-output geometry, and logical output
-//! dimensions via xdg-output (so fractional scaling and edge clamping agree).
-//! The thread is
-//! purely event driven: it only wakes when a window is created, closed, moved,
-//! resized, or focused, so the idle cost is zero.
+//! A background event queue tracks the activated toplevel, its per-output
+//! geometry, and logical dimensions via xdg-output (so fractional scaling and
+//! edge clamping agree). It shares the panel-granted privileged connection with
+//! the paste service when available. The thread is purely event driven.
 //!
-//! Not every environment allows this: cosmic-comp only exposes the
-//! `zcosmic_toplevel_info_v1` global to non-sandboxed clients, so the Flatpak
-//! build gracefully keeps the previous top-strip placement (the snapshot stays
-//! `None` and callers fall back).
+//! COSMIC permits `zcosmic_toplevel_info_v1` on privileged panel connections,
+//! including for Flatpak applets. Without the grant/protocol, the snapshot stays
+//! `None` and callers fall back to the active-monitor strip.
 //!
 //! Protocol XMLs are vendored under `protocols/` and scanned at compile time
 //! with `wayland-scanner`.  The toplevel info protocol is bound as version 2:
@@ -506,7 +503,11 @@ impl Tracker {
         let spawn = std::thread::Builder::new()
             .name("clippy-land-toplevel".into())
             .spawn(move || {
-                if let Err(err) = run(shared) {
+                if let Err(err) = run(Arc::clone(&shared)) {
+                    // Do not keep stale geometry after losing the connection.
+                    if let Ok(mut snapshot) = shared.lock() {
+                        *snapshot = None;
+                    }
                     eprintln!("clippy-land: toplevel tracking disabled ({err})");
                 }
             });
@@ -518,7 +519,7 @@ impl Tracker {
 }
 
 fn run(shared: Arc<Mutex<Option<Snapshot>>>) -> Result<(), String> {
-    let conn = Connection::connect_to_env().map_err(|err| format!("wayland connect: {err}"))?;
+    let conn = super::wayland::connection()?;
     let (globals, mut queue) =
         registry_queue_init::<TrackerState>(&conn).map_err(|err| format!("registry: {err}"))?;
     let qh = queue.handle();

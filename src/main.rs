@@ -48,6 +48,10 @@ fn main() -> cosmic::iced::Result {
         }
     }
 
+    // Take the panel-granted FD before libcosmic starts any worker threads.
+    // --toggle and --help deliberately do not consume applet connections.
+    services::wayland::initialize();
+
     let requested_languages = i18n_embed::DesktopLanguageRequester::requested_languages();
     i18n::init(&requested_languages);
     cosmic::applet::run::<app::AppModel>(app::AppFlags {
