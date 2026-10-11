@@ -77,7 +77,7 @@ Go to **COSMIC Settings → Keyboard → Custom Shortcuts**, add a new shortcut 
 - **Command:** `cosmic-applet-clippy-land --toggle` (or `flatpak run io.github.k33wee.clippy-land --toggle` if installed via Flatpak)
 - **Shortcut:** your preferred key combo (e.g. `Super+V`)
 
-> **Note:** Due to a current limitation in the COSMIC panel, opening a popup without a pointer event (i.e. without actually clicking the applet icon) is not natively supported. As a workaround, `--toggle` opens the history as a full-width layer surface anchored to the top of the screen rather than as the usual dropdown under the icon. This is a known limitation and may be improved in the future once COSMIC panel exposes a proper API for this.
+> **Note:** Due to a current limitation in the COSMIC panel, opening a popup without a pointer event (i.e. without actually clicking the applet icon) is not natively supported. As a workaround, `--toggle` opens the history as a layer surface rather than as the usual dropdown under the icon. When the focused window is known (via the `cosmic-toplevel-info` protocol), the popup appears as a panel centered on that window; otherwise it falls back to a full-width strip on the **active monitor** (the compositor tracks which output you are working on, even with no windows open). Toplevel tracking requires non-sandboxed access, so Flatpak installs always use the fallback placement. This is a known limitation and may be improved in the future once COSMIC panel exposes a proper API for this.
 
 For local development, the binary also supports:
 

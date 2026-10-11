@@ -880,6 +880,7 @@ dependencies = [
 name = "cosmic-applet-clippy-land"
 version = "1.0.0"
 dependencies = [
+ "bitflags 2.13.2",
  "bytes",
  "futures-util",
  "i18n-embed",
@@ -893,10 +894,12 @@ dependencies = [
  "serde",
  "tokio",
  "toml 1.1.8+spec-1.1.0",
+ "wayland-backend",
  "wayland-client",
  "wayland-protocols",
  "wayland-protocols-misc",
  "wayland-protocols-wlr",
+ "wayland-scanner",
  "wl-clipboard-rs",
  "xkbcommon 0.8.0",
  "zbus",

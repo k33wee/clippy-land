@@ -60,6 +60,8 @@ pub struct AppModel {
     pub(in crate::app) text_overlay_index: Option<usize>,
     /// Pending timing trace for popup open diagnostics.
     pub(in crate::app) popup_open_trace: RefCell<Option<PopupOpenTrace>>,
+    /// Background focused-toplevel tracker used to place the toggle popup.
+    pub(in crate::app) toplevel_tracker: crate::services::toplevel::Tracker,
 }
 
 #[derive(Debug, Clone, Default)]

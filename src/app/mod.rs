@@ -19,7 +19,9 @@ use crate::settings::AppSettings;
 use cosmic::iced::platform_specific::shell::wayland::commands::layer_surface::{
     self, KeyboardInteractivity,
 };
-use cosmic::iced::runtime::platform_specific::wayland::layer_surface::SctkLayerSurfaceSettings;
+use cosmic::iced::runtime::platform_specific::wayland::layer_surface::{
+    IcedMargin, SctkLayerSurfaceSettings,
+};
 use cosmic::iced::{Limits, Subscription, window::Id};
 use cosmic::prelude::*;
 use std::time::{Duration, Instant};
@@ -32,17 +34,41 @@ pub(super) fn text_overlay_scroll_id() -> cosmic::iced::core::widget::Id {
     cosmic::iced::core::widget::Id::new("text-overlay-scroll")
 }
 
-pub(in crate::app) fn history_layer_surface_settings(id: Id) -> SctkLayerSurfaceSettings {
-    SctkLayerSurfaceSettings {
-        id,
-        keyboard_interactivity: KeyboardInteractivity::OnDemand,
-        anchor: layer_surface::Anchor::TOP
-            | layer_surface::Anchor::LEFT
-            | layer_surface::Anchor::RIGHT,
-        namespace: "clippy-land".into(),
-        size: Some((None, Some(400))),
-        size_limits: Limits::NONE.min_width(1.0).min_height(1.0),
-        ..Default::default()
+pub(in crate::app) fn history_layer_surface_settings(
+    id: Id,
+    placement: surfaces::TogglePopupPlacement,
+) -> SctkLayerSurfaceSettings {
+    match placement {
+        surfaces::TogglePopupPlacement::NearFocusedWindow { left, top, width } => {
+            SctkLayerSurfaceSettings {
+                id,
+                keyboard_interactivity: KeyboardInteractivity::OnDemand,
+                anchor: layer_surface::Anchor::TOP | layer_surface::Anchor::LEFT,
+                namespace: "clippy-land".into(),
+                size: Some((Some(width), Some(surfaces::TOGGLE_POPUP_HEIGHT))),
+                margin: IcedMargin {
+                    top,
+                    left,
+                    ..Default::default()
+                },
+                size_limits: Limits::NONE
+                    .min_width(1.0)
+                    .min_height(1.0)
+                    .max_width(width as f32 + 1.0),
+                ..Default::default()
+            }
+        }
+        surfaces::TogglePopupPlacement::ActiveMonitorStrip => SctkLayerSurfaceSettings {
+            id,
+            keyboard_interactivity: KeyboardInteractivity::OnDemand,
+            anchor: layer_surface::Anchor::TOP
+                | layer_surface::Anchor::LEFT
+                | layer_surface::Anchor::RIGHT,
+            namespace: "clippy-land".into(),
+            size: Some((None, Some(surfaces::TOGGLE_POPUP_HEIGHT))),
+            size_limits: Limits::NONE.min_width(1.0).min_height(1.0),
+            ..Default::default()
+        },
     }
 }
 
@@ -87,6 +113,7 @@ impl cosmic::Application for AppModel {
             core,
             settings_draft: SettingsDraft::from_settings(&settings),
             settings,
+            toplevel_tracker: crate::services::toplevel::Tracker::started(),
             ..Default::default()
         };
 
