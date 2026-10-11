@@ -38,37 +38,39 @@ pub(in crate::app) fn history_layer_surface_settings(
     id: Id,
     placement: surfaces::TogglePopupPlacement,
 ) -> SctkLayerSurfaceSettings {
-    match placement {
-        surfaces::TogglePopupPlacement::NearFocusedWindow { left, top, width } => {
-            SctkLayerSurfaceSettings {
-                id,
-                keyboard_interactivity: KeyboardInteractivity::OnDemand,
-                anchor: layer_surface::Anchor::TOP | layer_surface::Anchor::LEFT,
-                namespace: "clippy-land".into(),
-                size: Some((Some(width), Some(surfaces::TOGGLE_POPUP_HEIGHT))),
-                margin: IcedMargin {
-                    top,
-                    left,
-                    ..Default::default()
-                },
-                size_limits: Limits::NONE
-                    .min_width(1.0)
-                    .min_height(1.0)
-                    .max_width(width as f32 + 1.0),
-                ..Default::default()
-            }
+    let (margin, height, exclusive_zone) = match placement {
+        // Opposing horizontal anchors plus margins produce the desired small
+        // surface while still letting the compositor choose its width.
+        surfaces::TogglePopupPlacement::NearFocusedWindow { rect, right_margin } => (
+            IcedMargin {
+                top: rect.y,
+                left: rect.x,
+                right: right_margin,
+                bottom: 0,
+            },
+            rect.height as u32,
+            // Geometry is relative to the output, not the reserved work area.
+            -1,
+        ),
+        surfaces::TogglePopupPlacement::ActiveMonitorStrip => {
+            (IcedMargin::default(), surfaces::TOGGLE_POPUP_HEIGHT, 0)
         }
-        surfaces::TogglePopupPlacement::ActiveMonitorStrip => SctkLayerSurfaceSettings {
-            id,
-            keyboard_interactivity: KeyboardInteractivity::OnDemand,
-            anchor: layer_surface::Anchor::TOP
-                | layer_surface::Anchor::LEFT
-                | layer_surface::Anchor::RIGHT,
-            namespace: "clippy-land".into(),
-            size: Some((None, Some(surfaces::TOGGLE_POPUP_HEIGHT))),
-            size_limits: Limits::NONE.min_width(1.0).min_height(1.0),
-            ..Default::default()
-        },
+    };
+    SctkLayerSurfaceSettings {
+        id,
+        keyboard_interactivity: KeyboardInteractivity::OnDemand,
+        // COSMIC Panel's layer proxy omits the initial configure when an
+        // exact fixed size is requested. An unspecified width ensures the
+        // compositor chooses a size and the proxy forwards that configure.
+        anchor: layer_surface::Anchor::TOP
+            | layer_surface::Anchor::LEFT
+            | layer_surface::Anchor::RIGHT,
+        namespace: "clippy-land".into(),
+        margin,
+        exclusive_zone,
+        size: Some((None, Some(height))),
+        size_limits: Limits::NONE.min_width(1.0).min_height(1.0),
+        ..Default::default()
     }
 }
 
@@ -108,6 +110,12 @@ impl cosmic::Application for AppModel {
             init_started,
             stage_started.elapsed(),
         );
+
+        let mut core = core;
+        // Disable automatic theme radii for layer surfaces: COSMIC Panel can
+        // reject the radius before a newly opened layer surface is fully
+        // configured, disconnecting the applet before it can show the popup.
+        core.set_auto_corner_radius(cosmic::core::Auto::Window | cosmic::core::Auto::Popup);
 
         let mut app = AppModel {
             core,

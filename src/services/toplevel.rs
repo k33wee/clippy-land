@@ -5,7 +5,9 @@
 //! the user is working instead of a full-width strip at the top of the screen.
 //!
 //! This module runs a dedicated Wayland connection on a background thread that
-//! tracks the activated toplevel and its per-output geometry.  The thread is
+//! tracks the activated toplevel, its per-output geometry, and logical output
+//! dimensions via xdg-output (so fractional scaling and edge clamping agree).
+//! The thread is
 //! purely event driven: it only wakes when a window is created, closed, moved,
 //! resized, or focused, so the idle cost is zero.
 //!
@@ -32,6 +34,9 @@ use wayland_client::globals::{GlobalListContents, registry_queue_init};
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::protocol::wl_registry::WlRegistry;
 use wayland_client::{Connection, Dispatch, Proxy, QueueHandle, event_created_child};
+use wayland_protocols::xdg::xdg_output::zv1::client::{
+    zxdg_output_manager_v1::ZxdgOutputManagerV1, zxdg_output_v1::ZxdgOutputV1,
+};
 
 use protocols::foreign_toplevel_list::client::{
     ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
@@ -143,12 +148,21 @@ pub struct WindowRect {
     pub height: i32,
 }
 
+/// Logical output size from xdg-output (including fractional scaling).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OutputSize {
+    pub width: i32,
+    pub height: i32,
+}
+
 /// Latest knowledge about the focused toplevel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Snapshot {
     /// Geometry of the activated toplevel relative to the output where it
     /// covers the largest area, or `None` when no toplevel is focused.
     pub focused_window: Option<WindowRect>,
+    /// Logical size of the same output as `focused_window`.
+    pub focused_output: Option<OutputSize>,
 }
 
 /// `zcosmic_toplevel_handle_v1.state` array value marking the activated
@@ -181,12 +195,14 @@ impl<K: WindowKey> Default for WindowRecord<K> {
 #[derive(Debug)]
 struct TrackerCore<K: WindowKey> {
     windows: HashMap<K, WindowRecord<K>>,
+    outputs: HashMap<K, OutputSize>,
 }
 
 impl<K: WindowKey> Default for TrackerCore<K> {
     fn default() -> Self {
         Self {
             windows: HashMap::new(),
+            outputs: HashMap::new(),
         }
     }
 }
@@ -218,25 +234,33 @@ impl<K: WindowKey> TrackerCore<K> {
         self.windows.remove(key);
     }
 
-    fn snapshot(&self) -> Snapshot {
-        Snapshot {
-            focused_window: self
-                .windows
-                .values()
-                .filter(|record| record.activated)
-                .filter_map(largest_rect)
-                .max_by_key(|rect| (rect.width as i64) * (rect.height as i64)),
+    fn set_output_size(&mut self, output: K, size: OutputSize) {
+        self.outputs.insert(output, size);
+    }
+
+    fn remove_output(&mut self, output: &K) {
+        self.outputs.remove(output);
+        for window in self.windows.values_mut() {
+            window.rects.remove(output);
         }
     }
-}
 
-fn largest_rect<K: WindowKey>(record: &WindowRecord<K>) -> Option<WindowRect> {
-    record
-        .rects
-        .values()
-        .copied()
-        .filter(|rect| rect.width > 0 && rect.height > 0)
-        .max_by_key(|rect| (rect.width as i64) * (rect.height as i64))
+    fn snapshot(&self) -> Snapshot {
+        let focused = self
+            .windows
+            .values()
+            .filter(|record| record.activated)
+            .flat_map(|record| record.rects.iter())
+            .filter(|(_, rect)| rect.width > 0 && rect.height > 0)
+            .max_by_key(|(_, rect)| i64::from(rect.width) * i64::from(rect.height));
+        Snapshot {
+            focused_window: focused.map(|(_, rect)| *rect),
+            focused_output: focused
+                .and_then(|(output, _)| self.outputs.get(output))
+                .copied()
+                .filter(|size| size.width > 0 && size.height > 0),
+        }
+    }
 }
 
 struct TrackerState {
@@ -244,11 +268,28 @@ struct TrackerState {
     shared: Arc<Mutex<Option<Snapshot>>>,
     info: Option<ZcosmicToplevelInfoV1>,
     foreign_handles: HashMap<ObjectId, ZcosmicToplevelHandleV1>,
-    bound_output_names: std::collections::HashSet<u32>,
-    _outputs: Vec<WlOutput>,
+    output_manager: Option<ZxdgOutputManagerV1>,
+    outputs: HashMap<u32, (WlOutput, Option<ZxdgOutputV1>)>,
 }
 
 impl TrackerState {
+    fn bind_output(
+        &mut self,
+        registry: &WlRegistry,
+        name: u32,
+        version: u32,
+        qh: &QueueHandle<Self>,
+    ) {
+        self.outputs.entry(name).or_insert_with(|| {
+            let output: WlOutput = registry.bind(name, version.min(2), qh, ());
+            let description = self
+                .output_manager
+                .as_ref()
+                .map(|manager| manager.get_xdg_output(&output, qh, output.id()));
+            (output, description)
+        });
+    }
+
     fn publish(&self) {
         if let Ok(mut guard) = self.shared.lock() {
             *guard = Some(self.core.snapshot());
@@ -271,15 +312,16 @@ impl Dispatch<WlRegistry, GlobalListContents> for TrackerState {
                 interface,
                 version,
             } if interface == "wl_output" => {
-                // Initial outputs are bound from GlobalList below; bind only
-                // names not already handled there (typically hot-plug events).
-                if state.bound_output_names.insert(name) {
-                    let output: WlOutput = proxy.bind(name, version.min(2), qh, ());
-                    state._outputs.push(output);
-                }
+                state.bind_output(proxy, name, version, qh);
             }
             wayland_client::protocol::wl_registry::Event::GlobalRemove { name } => {
-                state.bound_output_names.remove(&name);
+                if let Some((output, description)) = state.outputs.remove(&name) {
+                    state.core.remove_output(&output.id());
+                    if let Some(description) = description {
+                        description.destroy();
+                    }
+                    state.publish();
+                }
             }
             _ => {}
         }
@@ -295,6 +337,36 @@ impl Dispatch<WlOutput, ()> for TrackerState {
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
     ) {
+    }
+}
+
+impl Dispatch<ZxdgOutputManagerV1, ()> for TrackerState {
+    fn event(
+        _state: &mut Self,
+        _proxy: &ZxdgOutputManagerV1,
+        _event: <ZxdgOutputManagerV1 as Proxy>::Event,
+        _data: &(),
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+    ) {
+    }
+}
+
+impl Dispatch<ZxdgOutputV1, ObjectId> for TrackerState {
+    fn event(
+        state: &mut Self,
+        _proxy: &ZxdgOutputV1,
+        event: <ZxdgOutputV1 as Proxy>::Event,
+        output: &ObjectId,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+    ) {
+        if let wayland_protocols::xdg::xdg_output::zv1::client::zxdg_output_v1::Event::LogicalSize {
+            width, height,
+        } = event {
+            state.core.set_output_size(output.clone(), OutputSize { width, height });
+            state.publish();
+        }
     }
 }
 
@@ -459,33 +531,24 @@ fn run(shared: Arc<Mutex<Option<Snapshot>>>) -> Result<(), String> {
             .to_string()
     })?;
 
-    // Bind all current outputs: geometry events reference their wl_output
-    // objects. Remember names so queued initial registry events don't bind
-    // duplicates, while later hot-plug events are handled by Dispatch.
-    let mut bound_output_names = std::collections::HashSet::new();
-    let outputs: Vec<WlOutput> = globals.contents().with_list(|entries| {
-        entries
-            .iter()
-            .filter(|global| global.interface == "wl_output")
-            .map(|global| {
-                bound_output_names.insert(global.name);
-                globals
-                    .registry()
-                    .bind(global.name, global.version.min(2), &qh, ())
-            })
-            .collect()
-    });
-
     let mut state = TrackerState {
-        core: TrackerCore {
-            windows: HashMap::new(),
-        },
+        core: TrackerCore::default(),
         shared,
         info: Some(info),
         foreign_handles: HashMap::new(),
-        bound_output_names,
-        _outputs: outputs,
+        output_manager: globals.bind(&qh, 1..=2, ()).ok(),
+        outputs: HashMap::new(),
     };
+    // Bind current outputs before dispatching geometry events; later hot-plug
+    // events use the same map, avoiding duplicate bindings.
+    globals.contents().with_list(|entries| {
+        for global in entries
+            .iter()
+            .filter(|global| global.interface == "wl_output")
+        {
+            state.bind_output(globals.registry(), global.name, global.version, &qh);
+        }
+    });
     // Publish an initial (empty) snapshot once all globals are bound.
     state.publish();
 
@@ -595,6 +658,95 @@ mod tests {
     }
 
     #[test]
+    fn focused_output_size_matches_the_selected_window_rect() {
+        let mut core: TrackerCore<u64> = TrackerCore::default();
+        core.set_activated(1, true);
+        core.set_geometry(1, 10, rect(0, 0, 500, 400));
+        core.set_geometry(1, 20, rect(100, 50, 800, 600));
+        core.set_output_size(
+            10,
+            OutputSize {
+                width: 1280,
+                height: 720,
+            },
+        );
+        core.set_output_size(
+            20,
+            OutputSize {
+                width: 2752,
+                height: 1152,
+            },
+        );
+        assert_eq!(
+            core.snapshot().focused_output,
+            Some(OutputSize {
+                width: 2752,
+                height: 1152
+            })
+        );
+    }
+
+    #[test]
+    fn logical_output_size_updates_are_reflected_without_window_changes() {
+        let mut core: TrackerCore<u64> = TrackerCore::default();
+        core.set_activated(1, true);
+        core.set_geometry(1, 10, rect(0, 0, 800, 600));
+        core.set_output_size(
+            10,
+            OutputSize {
+                width: 1920,
+                height: 1080,
+            },
+        );
+        core.set_output_size(
+            10,
+            OutputSize {
+                width: 1536,
+                height: 864,
+            },
+        );
+        assert_eq!(
+            core.snapshot().focused_output,
+            Some(OutputSize {
+                width: 1536,
+                height: 864
+            })
+        );
+    }
+
+    #[test]
+    fn unplugged_output_removes_its_window_geometry() {
+        let mut core: TrackerCore<u64> = TrackerCore::default();
+        core.set_activated(1, true);
+        core.set_geometry(1, 10, rect(0, 0, 800, 600));
+        core.set_output_size(
+            10,
+            OutputSize {
+                width: 1920,
+                height: 1080,
+            },
+        );
+        core.remove_output(&10);
+        assert_eq!(core.snapshot(), Snapshot::default());
+    }
+
+    #[test]
+    fn missing_or_invalid_output_size_is_not_used() {
+        let mut core: TrackerCore<u64> = TrackerCore::default();
+        core.set_activated(1, true);
+        core.set_geometry(1, 10, rect(0, 0, 800, 600));
+        assert_eq!(core.snapshot().focused_output, None);
+        core.set_output_size(
+            10,
+            OutputSize {
+                width: 0,
+                height: 1080,
+            },
+        );
+        assert_eq!(core.snapshot().focused_output, None);
+    }
+
+    #[test]
     fn tracker_snapshot_is_none_before_any_publish() {
         let tracker = Tracker::default();
         assert_eq!(tracker.snapshot(), None);
@@ -615,7 +767,11 @@ mod tests {
         let snapshot = tracker
             .snapshot()
             .expect("tracker should publish a snapshot within 1.5s");
-        println!("focused_window = {:?}", snapshot.focused_window);
+        println!("snapshot = {snapshot:?}");
+        assert!(
+            snapshot.focused_output.is_some(),
+            "expected logical output dimensions"
+        );
         assert!(
             snapshot.focused_window.is_some(),
             "expected a focused toplevel while a test terminal holds focus"

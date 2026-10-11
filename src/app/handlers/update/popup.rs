@@ -93,6 +93,7 @@ fn close_popup(app: &mut AppModel, reason: &'static str) -> Task<cosmic::Action<
 fn clear_popup_state(app: &mut AppModel, reason: &'static str) {
     app.popup = None;
     app.popup_surface = None;
+    app.toggle_popup_placement = None;
     app.popup_controls_ready = false;
     app.search_query.clear();
     app.settings_open = false;

@@ -20,6 +20,8 @@ pub struct AppModel {
     pub(in crate::app) settings: AppSettings,
     pub(in crate::app) popup: Option<Id>,
     pub(in crate::app) popup_surface: Option<PopupSurface>,
+    /// Placement captured when toggled, so subsequent focus changes cannot move it.
+    pub(in crate::app) toggle_popup_placement: Option<crate::app::surfaces::TogglePopupPlacement>,
     /// False during initial popup mapping so non-essential footer controls can be revealed
     /// only after the popup has actually opened.
     pub(in crate::app) popup_controls_ready: bool,

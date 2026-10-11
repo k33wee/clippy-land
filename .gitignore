@@ -29,3 +29,7 @@ release/
 # Debian package build artifacts
 deb_build/
 *.deb
+
+# Others
+.pi/
+artifacts/

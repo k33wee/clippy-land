@@ -7,6 +7,8 @@ fn popup_closed_clears_popup_and_search() {
     let id = cosmic::iced::window::Id::unique();
     app.popup = Some(id);
     app.popup_surface = Some(PopupSurface::AnchoredPopup);
+    app.toggle_popup_placement =
+        Some(crate::app::surfaces::TogglePopupPlacement::ActiveMonitorStrip);
     app.popup_controls_ready = true;
     app.search_query = "hello".into();
     app.hovered_index = Some(1);
@@ -16,6 +18,7 @@ fn popup_closed_clears_popup_and_search() {
 
     assert!(app.popup.is_none());
     assert!(app.popup_surface.is_none());
+    assert!(app.toggle_popup_placement.is_none());
     assert!(!app.popup_controls_ready);
     assert!(app.search_query.is_empty());
     assert!(app.hovered_index.is_none());
@@ -121,8 +124,47 @@ fn toggle_via_ipc_opens_layer_surface_popup_and_starts_trace() {
 
     assert!(app.popup.is_some());
     assert_eq!(app.popup_surface, Some(PopupSurface::LayerSurface));
+    assert_eq!(
+        app.toggle_popup_placement,
+        Some(crate::app::surfaces::TogglePopupPlacement::ActiveMonitorStrip)
+    );
     assert!(!app.popup_controls_ready);
     assert!(app.popup_open_trace_pending_for_test());
+}
+
+#[test]
+fn layer_popup_view_fills_its_configured_surface_without_autosizing() {
+    let mut app = AppModel::default();
+    let popup_id = cosmic::iced::window::Id::unique();
+    app.popup = Some(popup_id);
+    app.popup_surface = Some(PopupSurface::LayerSurface);
+    app.toggle_popup_placement = Some(
+        crate::app::surfaces::TogglePopupPlacement::NearFocusedWindow {
+            rect: crate::services::toplevel::WindowRect {
+                x: 1923,
+                y: 613,
+                width: 560,
+                height: 400,
+            },
+            right_margin: 269,
+        },
+    );
+
+    let popup = view::view_window(&app, popup_id);
+    assert_eq!(
+        popup.as_widget().size(),
+        cosmic::iced::Size::new(cosmic::iced::Length::Fill, cosmic::iced::Length::Fill)
+    );
+}
+
+#[test]
+fn anchored_popup_does_not_reuse_toggle_placement() {
+    let mut app = AppModel::default();
+    app.toggle_popup_placement =
+        Some(crate::app::surfaces::TogglePopupPlacement::ActiveMonitorStrip);
+    dispatch(&mut app, Message::TogglePopup);
+    assert_eq!(app.popup_surface, Some(PopupSurface::AnchoredPopup));
+    assert!(app.toggle_popup_placement.is_none());
 }
 
 #[test]

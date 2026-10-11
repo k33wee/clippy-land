@@ -6,6 +6,24 @@ use cosmic::widget::button::Style as ButtonStyle;
 use cosmic::widget::container::Style as ContainerStyle;
 use std::rc::Rc;
 
+/// Match the applet popup helper's appearance without its window-autosizing wrapper.
+pub(super) fn layer_popup_style(theme: &cosmic::Theme) -> ContainerStyle {
+    let cosmic = theme.cosmic();
+    let background = cosmic.background(theme.transparent);
+    ContainerStyle {
+        text_color: Some(background.on.into()),
+        icon_color: Some(background.on.into()),
+        background: Some(Background::Color(background.base.into())),
+        border: Border {
+            radius: cosmic.corner_radii.radius_m.into(),
+            width: 1.0,
+            color: background.divider.into(),
+        },
+        snap: true,
+        ..Default::default()
+    }
+}
+
 pub(super) fn highlight_history_target<'a>(
     content: Element<'a, Message>,
     active: bool,

@@ -22,7 +22,7 @@ toml = "1.1.8"
 wl-clipboard-rs = "0.9.4"
 wayland-backend = "0.3"
 wayland-client = "0.31.15"
-wayland-protocols = { version = "0.32.13", features = ["client"] }
+wayland-protocols = { version = "0.32.13", features = ["client", "unstable"] }
 wayland-protocols-misc = { version = "0.3.12", features = ["client"] }
 wayland-protocols-wlr = { version = "0.3.12", features = ["client"] }
 wayland-scanner = "0.31"
