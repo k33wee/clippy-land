@@ -5,6 +5,7 @@ mod hover;
 mod ipc;
 mod navigation;
 mod popup;
+mod preview;
 mod scrolling;
 mod search;
 mod settings;

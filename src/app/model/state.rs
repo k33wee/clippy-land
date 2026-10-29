@@ -32,6 +32,7 @@ pub struct AppModel {
     pub(in crate::app) search_query: String,
     /// Whether settings panel is visible inside popup.
     pub(in crate::app) settings_open: bool,
+    pub(in crate::app) about_open: bool,
     /// Draft settings form values (text inputs).
     pub(in crate::app) settings_draft: SettingsDraft,
     /// Last settings save/validation error shown in UI.
@@ -46,6 +47,8 @@ pub struct AppModel {
     pub(in crate::app) filtered_history_len_cache: usize,
     /// Cached decoded image handles for thumbnails, keyed by (content hash, byte length).
     pub(in crate::app) thumbnail_handles: HashMap<(u64, usize), ImageHandle>,
+    /// Original header dimensions, including failed lookups, cached once per image.
+    pub(in crate::app) image_dimensions: HashMap<(u64, usize), Option<(u32, u32)>>,
     /// Image identities waiting for or currently undergoing popup-preview decoding.
     pub(in crate::app) pending_thumbnails: HashSet<(u64, usize)>,
     /// Monotonic generation used to debounce thumbnail work after clipboard updates.
@@ -63,17 +66,29 @@ pub struct AppModel {
     pub(in crate::app) keyboard_focus: Option<(usize, FocusPart)>,
     /// Explicit text preview overlay target, if open.
     pub(in crate::app) text_overlay_index: Option<usize>,
+    /// Only the active image gets a larger decoded preview.
+    pub(in crate::app) image_preview: Option<ImagePreview>,
+    pub(in crate::app) image_preview_generation: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    /// One worker at a time; newer requests replace pending state instead of queueing buffers.
+    pub(in crate::app) image_preview_in_flight: Option<u64>,
     /// Pending timing trace for popup open diagnostics.
     pub(in crate::app) popup_open_trace: RefCell<Option<PopupOpenTrace>>,
     /// Background focused-toplevel tracker used to place the toggle popup.
     pub(in crate::app) toplevel_tracker: crate::services::toplevel::Tracker,
 }
 
+pub(in crate::app) struct ImagePreview {
+    pub key: (u64, usize),
+    pub generation: u64,
+    pub handle: Option<ImageHandle>,
+    pub failed: bool,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct SettingsDraft {
     pub max_history: String,
     pub max_pinned: String,
-    pub max_image_bytes: String,
+    pub max_image_mib: String,
     pub max_image_dimension_px: String,
 }
 
@@ -82,10 +97,29 @@ impl SettingsDraft {
         Self {
             max_history: settings.max_history.to_string(),
             max_pinned: settings.max_pinned.to_string(),
-            max_image_bytes: settings.max_image_bytes.to_string(),
+            max_image_mib: (settings.max_image_bytes as f64 / 1_048_576.0).to_string(),
             max_image_dimension_px: settings.max_image_dimension_px.to_string(),
         }
     }
+}
+
+/// MiB is a UI unit only; existing byte-valued configuration stays unchanged.
+pub(in crate::app) fn parse_image_mib(input: &str) -> Result<usize, ImageMiBError> {
+    let mib = input
+        .trim()
+        .parse::<f64>()
+        .map_err(|_| ImageMiBError::NotANumber)?;
+    if !mib.is_finite() || !(0.25..=64.0).contains(&mib) {
+        return Err(ImageMiBError::OutOfRange);
+    }
+    Ok((mib * 1_048_576.0).round() as usize)
+}
+
+/// Parse failures for the MiB field; the UI maps these to Fluent messages.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::app) enum ImageMiBError {
+    NotANumber,
+    OutOfRange,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -103,6 +137,17 @@ pub(in crate::app) enum PopupSurface {
 }
 
 impl AppModel {
+    pub(in crate::app) fn close_preview(&mut self) {
+        self.image_preview_generation
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.text_overlay_index = None;
+        self.image_preview = None;
+    }
+
+    pub(in crate::app) fn preview_is_open(&self) -> bool {
+        self.text_overlay_index.is_some() || self.image_preview.is_some()
+    }
+
     fn filtered_indices_cache_is_valid(&self) -> bool {
         self.filtered_query_cache == self.search_query
             && self.filtered_history_len_cache == self.history.len()

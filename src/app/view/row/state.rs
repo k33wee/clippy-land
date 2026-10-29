@@ -1,6 +1,4 @@
-use super::super::summary::{
-    EXPANDED_MAX_CHARS, summarize_one_line, summarize_one_line_with_limit, text_overlay_available,
-};
+use super::super::summary::{history_excerpt, summarize_one_line, text_overlay_available};
 use crate::app::AppModel;
 use crate::app::model::{FocusPart, HistoryItem};
 use crate::services::clipboard;
@@ -17,6 +15,7 @@ pub(in crate::app) enum RowContent {
     Image {
         mime: String,
         bytes_len: usize,
+        dimensions: Option<(u32, u32)>,
         content_hash: u64,
         thumbnail_handle: Option<ImageHandle>,
     },
@@ -26,7 +25,7 @@ pub(in crate::app) enum RowContent {
 pub(in crate::app) struct RowRenderState {
     pub(in crate::app) idx: usize,
     pub(in crate::app) pinned: bool,
-    pub(in crate::app) text_overlay_open: bool,
+    pub(in crate::app) preview_open: bool,
     pub(in crate::app) row_is_hovered: bool,
     pub(in crate::app) row_keyboard_focus: Option<FocusPart>,
     pub(in crate::app) hovered_focus: Option<FocusPart>,
@@ -46,7 +45,7 @@ impl RowRenderState {
         let content = match &item.entry {
             clipboard::ClipboardEntry::Text(text) => RowContent::Text {
                 collapsed_summary: summarize_one_line(text.as_str()),
-                expanded_summary: summarize_one_line_with_limit(text.as_str(), EXPANDED_MAX_CHARS),
+                expanded_summary: history_excerpt(text.as_str()),
                 overlay_available: text_overlay_available(text.as_str()),
             },
             clipboard::ClipboardEntry::Image {
@@ -57,6 +56,11 @@ impl RowRenderState {
             } => RowContent::Image {
                 mime: mime.clone(),
                 bytes_len: bytes.len(),
+                dimensions: app
+                    .image_dimensions
+                    .get(&(*hash, bytes.len()))
+                    .copied()
+                    .flatten(),
                 content_hash: *hash,
                 thumbnail_handle: app.thumbnail_handles.get(&(*hash, bytes.len())).cloned(),
             },
@@ -65,7 +69,16 @@ impl RowRenderState {
         Self {
             idx,
             pinned: item.pinned,
-            text_overlay_open: app.text_overlay_index == Some(idx),
+            preview_open: app.text_overlay_index == Some(idx)
+                || app
+                    .image_preview
+                    .as_ref()
+                    .is_some_and(|preview| match &item.entry {
+                        clipboard::ClipboardEntry::Image { bytes, hash, .. } => {
+                            preview.key == (*hash, bytes.len())
+                        }
+                        _ => false,
+                    }),
             row_is_hovered,
             row_keyboard_focus,
             hovered_focus,
@@ -78,6 +91,7 @@ impl Hash for RowRenderState {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.idx.hash(state);
         self.pinned.hash(state);
+        self.preview_open.hash(state);
         self.row_is_hovered.hash(state);
         self.row_keyboard_focus.hash(state);
         self.hovered_focus.hash(state);
@@ -96,12 +110,14 @@ impl Hash for RowRenderState {
             RowContent::Image {
                 mime,
                 bytes_len,
+                dimensions,
                 content_hash,
                 thumbnail_handle,
             } => {
                 1u8.hash(state);
                 mime.hash(state);
                 bytes_len.hash(state);
+                dimensions.hash(state);
                 content_hash.hash(state);
                 thumbnail_handle.is_some().hash(state);
             }

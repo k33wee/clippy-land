@@ -1,6 +1,5 @@
 use super::super::super::style::{
-    accent_icon_button_style, accent_svg_style, container_on_svg_style, highlight_history_target,
-    transparent_icon_button_style,
+    ControlTone, control_button_class, control_svg_style, highlight_history_target,
 };
 use super::super::{RowContent, RowRenderState};
 use crate::app::model::FocusPart;
@@ -15,7 +14,7 @@ pub(super) fn row_actions(state: &RowRenderState) -> Element<'static, Message> {
         || state.hovered_focus == Some(FocusPart::Pin);
     let preview_active = state.row_keyboard_focus == Some(FocusPart::Preview)
         || state.hovered_focus == Some(FocusPart::Preview)
-        || state.text_overlay_open;
+        || state.preview_open;
     let remove_active = state.row_keyboard_focus == Some(FocusPart::Remove)
         || state.hovered_focus == Some(FocusPart::Remove);
 
@@ -23,41 +22,35 @@ pub(super) fn row_actions(state: &RowRenderState) -> Element<'static, Message> {
         .spacing(2)
         .align_x(cosmic::iced::Alignment::Center);
 
+    actions = actions
+        .push(pin_button(state, pin_active))
+        .push(remove_button(state, remove_active));
     if matches!(
         &state.content,
         RowContent::Text {
             overlay_available: true,
             ..
-        }
+        } | RowContent::Image { .. }
     ) {
         actions = actions.push(preview_button(state, preview_active));
+    } else {
+        // Keep pin/delete targets aligned even when this item has no preview.
+        actions = actions.push(widget::space().height(26));
     }
 
-    actions = actions
-        .push(pin_button(state, pin_active))
-        .push(remove_button(state, remove_active));
-
     widget::container(actions)
-        .width(Length::Fixed(44.0))
-        .padding([0, 2])
+        .width(Length::Fixed(36.0))
+        .height(Length::Fill)
+        .align_y(cosmic::iced::Alignment::Center)
+        .padding([8, 2])
         .into()
 }
 
 fn pin_button(state: &RowRenderState, active: bool) -> Element<'static, Message> {
-    let pin_button_class = if state.pinned {
-        cosmic::theme::Button::Custom {
-            active: Box::new(|_, theme| accent_icon_button_style(theme)),
-            disabled: Box::new(accent_icon_button_style),
-            hovered: Box::new(|_, theme| accent_icon_button_style(theme)),
-            pressed: Box::new(|_, theme| accent_icon_button_style(theme)),
-        }
+    let tone = if state.pinned || active {
+        ControlTone::Accent
     } else {
-        cosmic::theme::Button::Custom {
-            active: Box::new(|_, theme| transparent_icon_button_style(theme)),
-            disabled: Box::new(transparent_icon_button_style),
-            hovered: Box::new(|_, theme| transparent_icon_button_style(theme)),
-            pressed: Box::new(|_, theme| transparent_icon_button_style(theme)),
-        }
+        ControlTone::Neutral
     };
 
     let pin_icon = widget::icon(if state.pinned {
@@ -65,15 +58,11 @@ fn pin_button(state: &RowRenderState, active: bool) -> Element<'static, Message>
     } else {
         icons::pin_icon()
     })
-    .class(if state.pinned {
-        accent_svg_style()
-    } else {
-        container_on_svg_style()
-    })
+    .class(control_svg_style(tone))
     .size(16);
 
     let pin_button = widget::button::custom(pin_icon)
-        .class(pin_button_class)
+        .class(control_button_class(tone))
         .on_press(Message::TogglePin(state.idx))
         .width(Length::Shrink);
 
@@ -96,17 +85,17 @@ fn pin_button(state: &RowRenderState, active: bool) -> Element<'static, Message>
 }
 
 fn remove_button(state: &RowRenderState, active: bool) -> Element<'static, Message> {
+    let tone = if active {
+        ControlTone::Destructive
+    } else {
+        ControlTone::Neutral
+    };
     let remove_button = widget::button::custom(
         widget::icon(icons::remove_icon())
-            .class(container_on_svg_style())
+            .class(control_svg_style(tone))
             .size(16),
     )
-    .class(cosmic::theme::Button::Custom {
-        active: Box::new(|_, theme| transparent_icon_button_style(theme)),
-        disabled: Box::new(transparent_icon_button_style),
-        hovered: Box::new(|_, theme| transparent_icon_button_style(theme)),
-        pressed: Box::new(|_, theme| transparent_icon_button_style(theme)),
-    })
+    .class(control_button_class(tone))
     .on_press(Message::RemoveHistory(state.idx))
     .width(Length::Shrink);
 
@@ -125,24 +114,24 @@ fn remove_button(state: &RowRenderState, active: bool) -> Element<'static, Messa
 }
 
 fn preview_button(state: &RowRenderState, active: bool) -> Element<'static, Message> {
+    let tone = if active {
+        ControlTone::Accent
+    } else {
+        ControlTone::Neutral
+    };
     let preview_button = widget::button::custom(
-        widget::icon(icons::named_symbolic_icon("system-search-symbolic"))
-            .class(container_on_svg_style())
+        widget::icon(icons::preview_icon())
+            .class(control_svg_style(tone))
             .size(16),
     )
-    .class(cosmic::theme::Button::Custom {
-        active: Box::new(|_, theme| transparent_icon_button_style(theme)),
-        disabled: Box::new(transparent_icon_button_style),
-        hovered: Box::new(|_, theme| transparent_icon_button_style(theme)),
-        pressed: Box::new(|_, theme| transparent_icon_button_style(theme)),
-    })
-    .on_press(Message::OpenTextOverlay(state.idx))
+    .class(control_button_class(tone))
+    .on_press(Message::OpenPreview(state.idx))
     .width(Length::Shrink);
 
     widget::mouse_area(highlight_history_target(
         widget::tooltip(
             preview_button,
-            widget::text("Preview full text"),
+            widget::text(fl!("preview")),
             widget::tooltip::Position::Top,
         )
         .into(),

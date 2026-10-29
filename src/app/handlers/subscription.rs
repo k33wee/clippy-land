@@ -111,7 +111,7 @@ pub(super) fn message_for_latin_key(ch: char) -> Option<Message> {
     match ch {
         'j' | 'J' => Some(Message::KeyboardNavigateDown),
         'k' | 'K' => Some(Message::KeyboardNavigateUp),
-        'q' | 'Q' => Some(Message::CloseTextOverlay),
+        'q' | 'Q' => Some(Message::ClosePreview),
         'h' | 'H' => Some(Message::MoveFocusLeft),
         'l' | 'L' => Some(Message::MoveFocusRight),
         '\n' | '\r' => Some(Message::ActivateSelection),

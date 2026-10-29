@@ -12,7 +12,15 @@ pub enum ClipboardEntry {
 }
 
 #[derive(Debug, Clone)]
+pub struct ClipboardPreview {
+    pub width: u32,
+    pub height: u32,
+    pub rgba: Bytes,
+}
+
+#[derive(Debug, Clone)]
 pub struct ClipboardThumbnail {
+    pub source_dimensions: (u32, u32),
     pub width: u32,
     pub height: u32,
     pub rgba: Bytes,

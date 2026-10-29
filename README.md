@@ -15,7 +15,7 @@ history only when the clipboard contents change.
 - Keep a history of recent clipboard entries (text + images), with configurable limits
 - Copy an entry with a single click or Enter, optionally paste it into the previously focused app, and auto-close the popup
 - Remove individual entries from the history
-- Clear unpinned history entries with one click while keeping pinned entries saved
+- About and Settings sit above a full-width search field; a small, right-aligned **Clear** action below search removes only unpinned entries
 - Pin important entries to the top of the history; pinned entries persist across app restarts (configurable pin limit)
 - In-popup **Settings** panel to adjust limits and apply them immediately:
   - max history entries
@@ -24,16 +24,19 @@ history only when the clipboard contents change.
   - max image dimensions
   - paste into the active app after selection
   - close the popup after selection
-- Smooth row behavior for text and image entries:
-  - text rows stay collapsed in-list and expose a lens button for a large full-text preview overlay inside the popup
-  - image previews keep a fixed size and centered row actions for stable targeting
+- A unified history list with subtle separators and consistent text/image rows:
+  - text entries show a bounded, four-line excerpt; URL styling remains copy-on-selection, and the eye button opens the existing full-text preview
+  - larger contain-fit thumbnails and right-side row actions keep fixed geometry; original dimensions appear in an image badge on hover or keyboard focus, with format and file size in its tooltip
+  - image rows have an eye button for a larger, contain-fit preview, decoded on demand with bounded memory
+  - empty history and unmatched searches show a centered status and a helpful hint
 - Move between entries with keyboard ( **up/down** or **k/j** to navigate rows; **left/right** or **h/l** to move between row actions: copy, preview (when available), pin, delete)
 - Keyboard activation and escape behavior:
   - press **Enter** on an entry to copy it and, by default, paste it into the previously focused app
-  - press **Enter** on the focused row action (including text preview lens) to activate that action
+  - press **Enter** on the focused row action (including the preview eye button) to activate that action
   - while the text preview overlay is open, use **up/down** or **k/j** to scroll it
-  - press **Q** to close the text preview overlay
-  - press **Esc** to close the popup
+  - press **Q** to close either preview overlay
+  - press **Esc** to return from a preview, Settings, or About to history; press it again to close the popup
+- An **About** view shows the app version, author, source repository, issue tracker, and license
 - Adds keyboard shortcuts for opening the history (see [Usage](#usage) below)
 
 ## Table of Contents
@@ -86,7 +89,9 @@ For local development, the binary also supports:
 
 ## Settings
 
-You can open the in-popup settings panel with the gear button.
+You can open the in-popup settings panel with the top-right gear button. Compact rows group history, image, and behavior controls; hover a label for range or behavior details. Numeric changes use the fixed **Apply** button; behavior switches still save immediately.
+
+Image size is displayed in **MiB** (0.25–64), while the existing configuration continues to store `max_image_bytes` in bytes. Fractional values are supported and opening/saving Settings preserves existing byte limits.
 
 Settings are validated before apply/save. Current allowed ranges are:
 

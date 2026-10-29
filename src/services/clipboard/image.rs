@@ -1,6 +1,6 @@
 use super::{
-    ClipboardEntry, ClipboardThumbnail, MAX_FULL_FRAME_THUMBNAIL_BYTES, THUMBNAIL_SIZE_PX,
-    debug_log, max_image_bytes, max_image_dimension_px,
+    ClipboardEntry, ClipboardPreview, ClipboardThumbnail, MAX_FULL_FRAME_THUMBNAIL_BYTES,
+    THUMBNAIL_SIZE_PX, debug_log, max_image_bytes, max_image_dimension_px,
 };
 use bytes::Bytes;
 use std::collections::hash_map::DefaultHasher;
@@ -80,9 +80,56 @@ pub(super) fn clipboard_entry_from_image_path(path: &Path) -> Option<ClipboardEn
     clipboard_entry_from_image_bytes(mime.to_string(), bytes)
 }
 
-pub fn make_thumbnail(mime: &str, bytes: &Bytes) -> Option<ClipboardThumbnail> {
+/// Read only the source header; never substitute the resized thumbnail's dimensions.
+pub fn image_dimensions(mime: &str, bytes: &[u8]) -> Option<(u32, u32)> {
     if mime == "image/png" {
-        return make_png_thumbnail(bytes);
+        let mut decoder = png::Decoder::new_with_limits(
+            Cursor::new(bytes),
+            png::Limits {
+                bytes: max_image_bytes(),
+            },
+        );
+        decoder.set_ignore_text_chunk(true);
+        decoder.set_ignore_iccp_chunk(true);
+        let reader = decoder.read_info().ok()?;
+        let (width, height) = (reader.info().width, reader.info().height);
+        return (width > 0 && height > 0).then_some((width, height));
+    }
+    let format = match mime {
+        "image/jpeg" => image::ImageFormat::Jpeg,
+        "image/webp" => image::ImageFormat::WebP,
+        _ => return None,
+    };
+    let mut reader = image::ImageReader::with_format(Cursor::new(bytes), format);
+    let mut limits = image::Limits::default();
+    limits.max_alloc = Some(MAX_FULL_FRAME_THUMBNAIL_BYTES);
+    reader.limits(limits);
+    let dimensions = reader.into_dimensions().ok()?;
+    (dimensions.0 > 0 && dimensions.1 > 0).then_some(dimensions)
+}
+
+pub fn make_thumbnail(mime: &str, bytes: &Bytes) -> Option<ClipboardThumbnail> {
+    let source_dimensions = image_dimensions(mime, bytes)?;
+    let preview = make_image_preview(mime, bytes, THUMBNAIL_SIZE_PX, &|| false)?;
+    encode_rgba_thumbnail(
+        preview.width,
+        preview.height,
+        preview.rgba,
+        source_dimensions,
+    )
+}
+
+pub fn make_image_preview(
+    mime: &str,
+    bytes: &Bytes,
+    max_edge: u32,
+    cancelled: &impl Fn() -> bool,
+) -> Option<ClipboardPreview> {
+    if cancelled() {
+        return None;
+    }
+    if mime == "image/png" {
+        return make_png_preview(bytes, max_edge, cancelled);
     }
 
     let max_dimension = max_image_dimension_px();
@@ -106,10 +153,18 @@ pub fn make_thumbnail(mime: &str, bytes: &Bytes) -> Option<ClipboardThumbnail> {
         }
     };
 
-    encode_thumbnail(decoded)
+    if cancelled() {
+        return None;
+    }
+    let preview = fit_preview(decoded, max_edge);
+    (!cancelled()).then_some(preview)
 }
 
-fn make_png_thumbnail(bytes: &Bytes) -> Option<ClipboardThumbnail> {
+fn make_png_preview(
+    bytes: &Bytes,
+    max_edge: u32,
+    cancelled: &impl Fn() -> bool,
+) -> Option<ClipboardPreview> {
     let mut decoder = png::Decoder::new_with_limits(
         Cursor::new(bytes),
         png::Limits {
@@ -139,10 +194,10 @@ fn make_png_thumbnail(bytes: &Bytes) -> Option<ClipboardThumbnail> {
             debug_log("clipboard thumbnail decode skipped: interlaced PNG frame is too large");
             return None;
         }
-        return decode_png_frame(reader, source_width, source_height);
+        return decode_png_frame(reader, source_width, source_height, max_edge, cancelled);
     }
 
-    let (width, height) = thumbnail_dimensions(source_width, source_height);
+    let (width, height) = thumbnail_dimensions(source_width, source_height, max_edge);
     let channels = png_channels(reader.output_color_type())?;
     let output_len = (width as usize)
         .checked_mul(height as usize)?
@@ -155,6 +210,9 @@ fn make_png_thumbnail(bytes: &Bytes) -> Option<ClipboardThumbnail> {
     let mut output_y = 0u32;
 
     while let Some(row) = reader.next_row().map_err(log_png_decode_error).ok()? {
+        if cancelled() {
+            return None;
+        }
         if output_y < height
             && source_y == sample_source_coordinate(output_y, height, source_height)
         {
@@ -173,20 +231,32 @@ fn make_png_thumbnail(bytes: &Bytes) -> Option<ClipboardThumbnail> {
         return None;
     }
 
-    encode_rgba_thumbnail(width, height, rgba)
+    Some(ClipboardPreview {
+        width,
+        height,
+        rgba: rgba.into(),
+    })
 }
 
 fn decode_png_frame(
     mut reader: png::Reader<Cursor<&Bytes>>,
     width: u32,
     height: u32,
-) -> Option<ClipboardThumbnail> {
+    max_edge: u32,
+    cancelled: &impl Fn() -> bool,
+) -> Option<ClipboardPreview> {
+    if cancelled() {
+        return None;
+    }
     let buffer_len = reader.output_buffer_size()?;
     let mut decoded = vec![0; buffer_len];
     let output = reader
         .next_frame(&mut decoded)
         .map_err(log_png_decode_error)
         .ok()?;
+    if cancelled() {
+        return None;
+    }
     let decoded = match (output.color_type, output.bit_depth) {
         (png::ColorType::Grayscale, png::BitDepth::Eight) => {
             image::DynamicImage::ImageLuma8(image::ImageBuffer::from_raw(width, height, decoded)?)
@@ -202,7 +272,8 @@ fn decode_png_frame(
         }
         _ => return None,
     };
-    encode_thumbnail(decoded)
+    let preview = fit_preview(decoded, max_edge);
+    (!cancelled()).then_some(preview)
 }
 
 fn png_channels((color, depth): (png::ColorType, png::BitDepth)) -> Option<usize> {
@@ -219,13 +290,12 @@ fn png_pixel_to_rgba(pixel: &[u8], channels: usize) -> [u8; 4] {
     }
 }
 
-fn thumbnail_dimensions(width: u32, height: u32) -> (u32, u32) {
-    if width <= THUMBNAIL_SIZE_PX && height <= THUMBNAIL_SIZE_PX {
+fn thumbnail_dimensions(width: u32, height: u32, max_edge: u32) -> (u32, u32) {
+    if width <= max_edge && height <= max_edge {
         return (width, height);
     }
 
-    let scale =
-        (THUMBNAIL_SIZE_PX as f64 / width as f64).min(THUMBNAIL_SIZE_PX as f64 / height as f64);
+    let scale = (max_edge as f64 / width as f64).min(max_edge as f64 / height as f64);
     (
         (width as f64 * scale).round().max(1.0) as u32,
         (height as f64 * scale).round().max(1.0) as u32,
@@ -242,18 +312,25 @@ fn log_png_decode_error(err: png::DecodingError) {
     debug_log(format!("clipboard thumbnail decode skipped: {err}"));
 }
 
-fn encode_thumbnail(decoded: image::DynamicImage) -> Option<ClipboardThumbnail> {
-    let thumb = if decoded.width() <= THUMBNAIL_SIZE_PX && decoded.height() <= THUMBNAIL_SIZE_PX {
+fn fit_preview(decoded: image::DynamicImage, max_edge: u32) -> ClipboardPreview {
+    let image = if decoded.width() <= max_edge && decoded.height() <= max_edge {
         decoded.into_rgba8()
     } else {
-        decoded
-            .thumbnail(THUMBNAIL_SIZE_PX, THUMBNAIL_SIZE_PX)
-            .into_rgba8()
+        decoded.thumbnail(max_edge, max_edge).into_rgba8()
     };
-    encode_rgba_thumbnail(thumb.width(), thumb.height(), thumb.into_raw())
+    ClipboardPreview {
+        width: image.width(),
+        height: image.height(),
+        rgba: image.into_raw().into(),
+    }
 }
 
-fn encode_rgba_thumbnail(width: u32, height: u32, rgba: Vec<u8>) -> Option<ClipboardThumbnail> {
+fn encode_rgba_thumbnail(
+    width: u32,
+    height: u32,
+    rgba: Bytes,
+    source_dimensions: (u32, u32),
+) -> Option<ClipboardThumbnail> {
     let mut png = Vec::new();
     let mut encoder = png::Encoder::new(&mut png, width, height);
     encoder.set_color(png::ColorType::Rgba);
@@ -265,9 +342,10 @@ fn encode_rgba_thumbnail(width: u32, height: u32, rgba: Vec<u8>) -> Option<Clipb
     drop(writer);
 
     Some(ClipboardThumbnail {
+        source_dimensions,
         width,
         height,
-        rgba: rgba.into(),
+        rgba,
         png: png.into(),
     })
 }

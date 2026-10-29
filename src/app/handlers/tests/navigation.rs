@@ -57,7 +57,7 @@ fn close_text_overlay_message_clears_overlay_index() {
     app.history.push_back(text_item("overlay text", false));
     app.text_overlay_index = Some(0);
 
-    dispatch(&mut app, Message::CloseTextOverlay);
+    dispatch(&mut app, Message::ClosePreview);
 
     assert!(app.text_overlay_index.is_none());
 }
@@ -71,7 +71,7 @@ fn close_text_overlay_message_closes_overlay_without_closing_popup() {
         .push_back(text_item("first line\nsecond line", false));
     app.text_overlay_index = Some(0);
 
-    dispatch(&mut app, Message::CloseTextOverlay);
+    dispatch(&mut app, Message::ClosePreview);
 
     assert_eq!(app.popup, Some(popup_id));
     assert!(app.text_overlay_index.is_none());
@@ -82,7 +82,7 @@ fn close_text_overlay_message_is_noop_when_overlay_not_open() {
     let mut app = AppModel::default();
     app.history.push_back(text_item("overlay text", false));
 
-    dispatch(&mut app, Message::CloseTextOverlay);
+    dispatch(&mut app, Message::ClosePreview);
 
     assert!(app.text_overlay_index.is_none());
 }
