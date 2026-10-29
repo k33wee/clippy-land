@@ -126,13 +126,12 @@ fn default_live_settings(_: &AppModel) -> LiveSettings {
     LiveSettings::default()
 }
 
-/// Do not ask cosmic-panel to blur this layer surface. Its background-effect
-/// proxy applies the region to every proxied layer surface except the one that
-/// requested it, so the shortcut never frosts and other layer surfaces can.
-/// The shortcut paints an opaque card instead (`layer_popup_style`).
+/// Request compositor blur for the shortcut's theme-selected background.
+/// When hosted by cosmic-panel, this requires its proxy to forward the region
+/// to the matching layer surface rather than skipping the requester.
 fn layer_surface_live_settings(_: &AppModel) -> LiveSettings {
     LiveSettings {
-        blur: Some(false),
+        blur: Some(true),
         ..Default::default()
     }
 }
@@ -250,13 +249,13 @@ mod tests {
     }
 
     #[test]
-    fn shortcut_surface_does_not_request_layer_blur() {
+    fn shortcut_surface_requests_layer_blur_without_changing_popup_defaults() {
         // Anchored popups keep libcosmic's applet blur path.
         assert_eq!(default_live_settings(&AppModel::default()).blur, None);
-        // The layer surface opts out (see layer_surface_live_settings).
+        // The shortcut needs its own request through the layer-surface proxy.
         assert_eq!(
             layer_surface_live_settings(&AppModel::default()).blur,
-            Some(false)
+            Some(true)
         );
     }
 

@@ -6,14 +6,12 @@ use cosmic::widget::button::Style as ButtonStyle;
 use cosmic::widget::container::Style as ContainerStyle;
 use std::rc::Rc;
 
-/// Solid shortcut card. The panel popup can use the translucent frosted fill
-/// because cosmic-panel blurs popups. That proxy skips blur for the layer
-/// surface that requested it, so the same fill leaves the desktop sharp and
-/// readable. The opaque theme background keeps the shortcut the same color
-/// without that see-through.
+/// Match the panel popup's theme-selected background and border.
+/// The translucent fill requires the shortcut's separate layer-surface blur
+/// request to be forwarded by a fixed cosmic-panel proxy.
 pub(super) fn layer_popup_style(theme: &cosmic::Theme) -> ContainerStyle {
     let cosmic = theme.cosmic();
-    let background = cosmic.background(false);
+    let background = cosmic.background(theme.transparent);
     ContainerStyle {
         text_color: Some(background.on.into()),
         icon_color: Some(background.on.into()),
@@ -238,20 +236,27 @@ mod tests {
     }
 
     #[test]
-    fn shortcut_popup_background_stays_opaque_when_frost_is_enabled() {
+    fn shortcut_popup_background_follows_theme_transparency() {
         for mut theme in [
             cosmic::Theme::light(),
             cosmic::Theme::dark(),
             cosmic::Theme::light_hc(),
             cosmic::Theme::dark_hc(),
         ] {
-            theme.transparent = true;
-            let style = layer_popup_style(&theme);
-            let Some(Background::Color(color)) = style.background else {
-                panic!("shortcut popup must paint a color");
-            };
-            assert_eq!(color.a, 1.0);
-            assert_eq!(color, Color::from(theme.cosmic().background(false).base));
+            for transparent in [false, true] {
+                theme.transparent = transparent;
+                let style = layer_popup_style(&theme);
+                let Some(Background::Color(color)) = style.background else {
+                    panic!("shortcut popup must paint a color");
+                };
+                assert_eq!(
+                    color,
+                    Color::from(theme.cosmic().background(transparent).base)
+                );
+                if !transparent {
+                    assert_eq!(color.a, 1.0);
+                }
+            }
         }
     }
 
