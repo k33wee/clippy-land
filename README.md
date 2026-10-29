@@ -7,7 +7,7 @@ COSMIC panel applet for keeping a history of recently copied text and images.
 
 Search your clipboard, pin entries for later, and preview text or images before copying them.
 
-<img src="./resources/example.png" alt="Clippy Land history with search, an image thumbnail, dimension badge, and pinned notes" width="360">
+<img src="./resources/example.png" alt="Clippy Land history with Clippy and the main features shown as clipboard entries" width="360">
 
 ## Usage
 
@@ -60,16 +60,16 @@ and the top-right gear to open Settings. You can also [set up a keyboard shortcu
 <details>
 <summary>More screenshots</summary>
 
-Screenshots use sample clipboard entries. Colors follow your COSMIC theme.
-The panel popup supports frosted glass; the shortcut popup uses a solid theme background.
+Screenshots use Clippy and feature descriptions as sample clipboard entries.
+Colors follow your COSMIC theme. These captures use the local cosmic-panel blur fix currently being tested.
 
 | Settings | Image preview |
 | --- | --- |
 | <img src="./resources/screenshots/settings.png" alt="Compact Settings with history, image limits, and behavior controls" width="300" loading="lazy"> | <img src="./resources/screenshots/image-preview.png" alt="Image preview with original dimensions, format, and file size" width="300" loading="lazy"> |
 
-| About | Frosted panel popup |
+| About | Frosted shortcut popup |
 | --- | --- |
-| <img src="./resources/screenshots/about.png" alt="About page with version, source, issue tracker, and license" width="300" loading="lazy"> | <img src="./resources/screenshots/panel-popup.png" alt="The panel popup with COSMIC frosted glass over a wallpaper" width="300" loading="lazy"> |
+| <img src="./resources/screenshots/about.png" alt="About page with version, source, issue tracker, and license" width="300" loading="lazy"> | <img src="./resources/screenshots/shortcut-popup.png" alt="Shortcut popup with Clippy, feature entries, and background blur" width="300" loading="lazy"> |
 
 </details>
 
