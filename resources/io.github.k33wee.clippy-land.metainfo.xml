@@ -125,6 +125,22 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="2.0.0" date="2026-10-29">
+      <url type="details">https://github.com/k33wee/clippy-land/releases/tag/v2.0.0</url>
+      <description>
+        <p>Redesigned clipboard history UI with previews, a compact settings page, and complete English and Italian localization.</p>
+        <ul>
+          <li>Redesigned popup with a compact About/Settings header, full-width search, and a separate Clear action that keeps pinned entries.</li>
+          <li>Unified history rows for pinned, text, and image entries with dimension badges and metadata tooltips.</li>
+          <li>Larger text and image previews, decoded on demand with bounded memory.</li>
+          <li>Compact Settings page with MiB image-size input, range validation, and immediate behavior toggles.</li>
+          <li>About page with version, author, source, issue tracker, and license links.</li>
+          <li>Bundled recolorable symbolic panel icon for light and dark panels.</li>
+          <li>Complete English and Italian translations.</li>
+          <li>Frosted shortcut popup; requires a cosmic-panel build with the fixed layer-surface blur proxy.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.2" date="2026-10-21">
       <url type="details">https://github.com/k33wee/clippy-land/releases/tag/v1.1.2</url>
       <description>
