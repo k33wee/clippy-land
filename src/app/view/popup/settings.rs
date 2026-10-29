@@ -1,114 +1,111 @@
 use crate::app::{AppModel, Message};
+use crate::fl;
 use cosmic::iced::Length;
 use cosmic::prelude::*;
 use cosmic::widget;
 
 pub(super) fn settings_panel(app: &AppModel) -> Element<'_, Message> {
-    let mut col = widget::column::Column::new().spacing(8).width(Length::Fill);
-
-    col = col
-        .push(widget::text::heading("Settings"))
-        .push(widget::text::caption("History limits"));
-
-    let history_max = widget::column::Column::new()
-        .spacing(4)
-        .push(widget::text::body("Max history entries"))
-        .push(
-            widget::text_input("e.g. 200", &app.settings_draft.max_history)
-                .on_input(Message::SettingsMaxHistoryChanged)
-                .width(Length::Fill),
-        )
-        .push(widget::text::caption("Allowed range: 30–5000"));
-
-    let pinned_max = widget::column::Column::new()
-        .spacing(4)
-        .push(widget::text::body("Max pinned entries"))
-        .push(
-            widget::text_input("e.g. 20", &app.settings_draft.max_pinned)
-                .on_input(Message::SettingsMaxPinnedChanged)
-                .width(Length::Fill),
-        )
-        .push(widget::text::caption(
-            "Allowed range: 0–500 (and ≤ max history)",
+    let history = widget::settings::section()
+        .title(fl!("settings-history"))
+        .add(number_row(
+            fl!("settings-history-limit"),
+            fl!("settings-placeholder-history"),
+            &app.settings_draft.max_history,
+            Message::SettingsMaxHistoryChanged,
+            fl!("settings-history-help"),
+        ))
+        .add(number_row(
+            fl!("settings-pin-limit"),
+            fl!("settings-placeholder-pins"),
+            &app.settings_draft.max_pinned,
+            Message::SettingsMaxPinnedChanged,
+            fl!("settings-pin-help"),
         ));
 
-    col = col.push(
-        widget::row::Row::new()
-            .spacing(8)
-            .push(history_max)
-            .push(pinned_max),
-    );
-
-    col = col.push(widget::divider::horizontal::light());
-    col = col.push(widget::text::caption("Image limits"));
-
-    let image_bytes = widget::column::Column::new()
-        .spacing(4)
-        .push(widget::text::body("Max image size (bytes)"))
-        .push(
-            widget::text_input("e.g. 8388608", &app.settings_draft.max_image_bytes)
-                .on_input(Message::SettingsMaxImageBytesChanged)
-                .width(Length::Fill),
-        )
-        .push(widget::text::caption("Allowed range: 262144–67108864"));
-
-    let image_dimension = widget::column::Column::new()
-        .spacing(4)
-        .push(widget::text::body("Max image dimension (px)"))
-        .push(
-            widget::text_input("e.g. 8192", &app.settings_draft.max_image_dimension_px)
-                .on_input(Message::SettingsMaxImageDimensionChanged)
-                .width(Length::Fill),
-        )
-        .push(widget::text::caption("Allowed range: 512–16384"));
-
-    col = col.push(
-        widget::row::Row::new()
-            .spacing(8)
-            .push(image_bytes)
-            .push(image_dimension),
-    );
-
-    col = col.push(widget::divider::horizontal::light());
-    col = col.push(widget::text::caption("Behavior"));
-
-    let paste_on_action = widget::column::Column::new()
-        .spacing(4)
-        .push(
-            widget::toggler(app.settings.paste_on_action)
-                .label("Paste into the active app after selection".to_string())
-                .on_toggle(Message::SettingsPasteOnActionToggled),
-        )
-        .push(widget::text::caption(
-            "After Enter or a click, closes the popup and sends Ctrl+V (Ctrl+Shift+V for recognized terminals) once focus returns. Falls back to copy-only when virtual keyboard access is unavailable.",
+    let images = widget::settings::section()
+        .title(fl!("settings-images"))
+        .add(number_row(
+            fl!("settings-image-size"),
+            fl!("settings-placeholder-image-mib"),
+            &app.settings_draft.max_image_mib,
+            Message::SettingsMaxImageMibChanged,
+            fl!("settings-image-size-help"),
+        ))
+        .add(number_row(
+            fl!("settings-image-edge"),
+            fl!("settings-placeholder-image-edge"),
+            &app.settings_draft.max_image_dimension_px,
+            Message::SettingsMaxImageDimensionChanged,
+            fl!("settings-image-edge-help"),
         ));
 
-    let close_popup_on_action = widget::column::Column::new()
-        .spacing(4)
-        .push(
-            widget::toggler(app.settings.close_popup_on_action)
-                .label("Close popup after selection".to_string())
-                .on_toggle(Message::SettingsClosePopupOnActionToggled),
-        )
-        .push(widget::text::caption(
-            "Closes the clipboard popup after an entry is copied or pasted. Disabling this also disables auto-paste.",
+    let behavior = widget::settings::section()
+        .title(fl!("settings-behavior"))
+        .add(toggle_row(
+            fl!("settings-auto-paste"),
+            app.settings.paste_on_action,
+            Message::SettingsPasteOnActionToggled,
+            fl!("settings-auto-paste-help"),
+        ))
+        .add(toggle_row(
+            fl!("settings-auto-close"),
+            app.settings.close_popup_on_action,
+            Message::SettingsClosePopupOnActionToggled,
+            fl!("settings-auto-close-help"),
         ));
 
-    col = col.push(paste_on_action).push(close_popup_on_action);
-
-    if let Some(err) = &app.settings_error {
-        col = col.push(widget::text::body(err));
+    let mut content = widget::column::Column::new()
+        .spacing(12)
+        .width(Length::Fill)
+        .push(widget::text::title4(fl!("settings")))
+        .push(history)
+        .push(images)
+        .push(behavior);
+    if let Some(error) = &app.settings_error {
+        content = content.push(widget::text::body(error).class(cosmic::theme::Text::Custom(
+            |theme| cosmic::iced::widget::text::Style {
+                color: Some(theme.cosmic().destructive.base.into()),
+                ..Default::default()
+            },
+        )));
     }
+    content.into()
+}
 
-    let apply_row = widget::row::Row::new()
-        .width(Length::Fill)
-        .push(widget::button::suggested("Apply").on_press(Message::ApplySettings));
-
-    col = col.push(apply_row);
-
-    widget::container(col)
-        .class(cosmic::theme::Container::Card)
-        .padding([8, 12])
-        .width(Length::Fill)
+fn number_row<'a>(
+    label: String,
+    placeholder: String,
+    value: &'a str,
+    on_input: fn(String) -> Message,
+    help: String,
+) -> Element<'a, Message> {
+    let label = widget::tooltip(
+        widget::text::body(label),
+        widget::text::body(help),
+        widget::tooltip::Position::Top,
+    );
+    widget::row::Row::new()
+        .spacing(8)
+        .align_y(cosmic::iced::Alignment::Center)
+        .push(widget::container(label).width(Length::Fill))
+        .push(
+            widget::text_input(placeholder, value)
+                .on_input(on_input)
+                .width(92),
+        )
         .into()
+}
+
+fn toggle_row(
+    label: String,
+    value: bool,
+    on_toggle: fn(bool) -> Message,
+    help: String,
+) -> Element<'static, Message> {
+    widget::tooltip(
+        widget::settings::item::builder(label).control(widget::toggler(value).on_toggle(on_toggle)),
+        widget::text::body(help),
+        widget::tooltip::Position::Top,
+    )
+    .into()
 }

@@ -1,6 +1,7 @@
 mod clipboard;
 mod navigation;
 mod popup;
+mod preview;
 mod settings;
 mod shared;
 
@@ -8,6 +9,28 @@ use crate::app::{AppModel, Message};
 use cosmic::prelude::*;
 
 pub(super) fn update(app: &mut AppModel, message: Message) -> Task<cosmic::Action<Message>> {
+    if let Message::OpenAboutLink(url) = message {
+        return Task::perform(
+            async move {
+                match tokio::process::Command::new("xdg-open")
+                    .arg(url)
+                    .status()
+                    .await
+                {
+                    Ok(status) if status.success() => {}
+                    result => eprintln!("Could not open About link: {result:?}"),
+                }
+            },
+            |_| cosmic::Action::None,
+        );
+    }
+    if matches!(
+        &message,
+        Message::OpenPreview(_) | Message::ClosePreview | Message::ImagePreviewReady { .. }
+    ) {
+        return preview::handle(app, message).unwrap_or_else(Task::none);
+    }
+
     // Clipboard and thumbnail messages own large buffers and are always consumed here.
     if matches!(
         &message,

@@ -122,11 +122,12 @@ fn clear_popup_state(app: &mut AppModel, reason: &'static str) {
     app.popup_controls_ready = false;
     app.search_query.clear();
     app.settings_open = false;
+    app.about_open = false;
     app.settings_error = None;
     app.hovered_index = None;
     app.at_scroll_bottom = false;
     app.history_viewport = None;
-    app.text_overlay_index = None;
+    app.close_preview();
     app.cancel_popup_open_trace(reason);
 }
 

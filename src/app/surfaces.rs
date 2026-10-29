@@ -6,7 +6,7 @@ use cosmic::prelude::*;
 use cosmic::surface::action::{self, LiveSettings};
 
 /// Preferred height of the toggle popup layer surface.
-pub(in crate::app) const TOGGLE_POPUP_HEIGHT: u32 = 400;
+pub(in crate::app) const TOGGLE_POPUP_HEIGHT: u32 = 580;
 const NEAR_WINDOW_MIN_WIDTH: i32 = 360;
 const NEAR_WINDOW_MAX_WIDTH: i32 = 560;
 
@@ -78,7 +78,7 @@ pub(in crate::app) fn open_layer_surface_popup(
     app.toggle_popup_placement = Some(placement);
 
     surface_task(action::app_layer_shell::<AppModel>(
-        default_live_settings,
+        layer_surface_live_settings,
         move |_| crate::app::history_layer_surface_settings(new_id, placement),
         None,
     ))
@@ -124,6 +124,16 @@ pub(in crate::app) fn destroy_popup_surface(
 
 fn default_live_settings(_: &AppModel) -> LiveSettings {
     LiveSettings::default()
+}
+
+/// Request compositor blur for the shortcut's theme-selected background.
+/// When hosted by cosmic-panel, this requires its proxy to forward the region
+/// to the matching layer surface rather than skipping the requester.
+fn layer_surface_live_settings(_: &AppModel) -> LiveSettings {
+    LiveSettings {
+        blur: Some(true),
+        ..Default::default()
+    }
 }
 
 fn surface_task(action: cosmic::surface::Action<Message>) -> Task<cosmic::Action<Message>> {
@@ -239,6 +249,17 @@ mod tests {
     }
 
     #[test]
+    fn shortcut_surface_requests_layer_blur_without_changing_popup_defaults() {
+        // Anchored popups keep libcosmic's applet blur path.
+        assert_eq!(default_live_settings(&AppModel::default()).blur, None);
+        // The shortcut needs its own request through the layer-surface proxy.
+        assert_eq!(
+            layer_surface_live_settings(&AppModel::default()).blur,
+            Some(true)
+        );
+    }
+
+    #[test]
     fn plan_centers_popup_on_focused_window() {
         assert_eq!(
             bounds(plan_toggle_popup(snapshot(
@@ -246,7 +267,7 @@ mod tests {
                 1920,
                 1080
             ))),
-            rect(520, 300, 560, 400)
+            rect(520, 210, 560, 580)
         );
     }
 
@@ -258,7 +279,7 @@ mod tests {
                 1920,
                 1080
             ))),
-            rect(0, 0, 360, 400)
+            rect(0, 0, 360, 580)
         );
     }
 
@@ -270,7 +291,7 @@ mod tests {
                 1920,
                 1080
             ))),
-            rect(1560, 680, 360, 400)
+            rect(1560, 500, 360, 580)
         );
     }
 
@@ -294,7 +315,7 @@ mod tests {
                 1920,
                 1080
             ))),
-            rect(0, 350, 360, 400)
+            rect(0, 260, 360, 580)
         );
     }
 
@@ -306,7 +327,7 @@ mod tests {
                 4000,
                 2000
             ))),
-            rect(1720, 800, 560, 400)
+            rect(1720, 710, 560, 580)
         );
     }
 
@@ -318,7 +339,7 @@ mod tests {
                 1920,
                 1080
             ))),
-            rect(60, 130, 450, 400)
+            rect(60, 40, 450, 580)
         );
     }
 
@@ -330,21 +351,21 @@ mod tests {
                 1920,
                 1080
             ))),
-            rect(1360, 680, 560, 400)
+            rect(1360, 500, 560, 580)
         );
     }
 
     #[test]
     fn bottom_right_focus_sets_margins_without_requesting_an_exact_width() {
         let placement = plan_toggle_popup(snapshot(rect(1662, 558, 1082, 510), 2752, 1152));
-        assert_eq!(bounds(placement), rect(1923, 613, 560, 400));
+        assert_eq!(bounds(placement), rect(1923, 523, 560, 580));
         assert_eq!(placement.content_width(), 560);
         let settings = crate::app::history_layer_surface_settings(Id::unique(), placement);
         use cosmic::iced::platform_specific::shell::wayland::commands::layer_surface::Anchor;
         assert_eq!(settings.anchor, Anchor::TOP | Anchor::LEFT | Anchor::RIGHT);
         // A compositor-chosen width forces the panel proxy's first configure.
-        assert_eq!(settings.size, Some((None, Some(400))));
-        assert_eq!(settings.margin.top, 613);
+        assert_eq!(settings.size, Some((None, Some(580))));
+        assert_eq!(settings.margin.top, 523);
         assert_eq!(settings.margin.left, 1923);
         assert_eq!(settings.margin.right, 269);
         assert_eq!(settings.exclusive_zone, -1);
@@ -359,7 +380,7 @@ mod tests {
         let placement = plan_toggle_popup(None);
         assert_eq!(placement.content_width(), 360);
         let settings = crate::app::history_layer_surface_settings(Id::unique(), placement);
-        assert_eq!(settings.size, Some((None, Some(400))));
+        assert_eq!(settings.size, Some((None, Some(580))));
         assert_eq!(settings.margin.top, 0);
         assert_eq!(settings.margin.left, 0);
         assert_eq!(settings.margin.right, 0);

@@ -119,6 +119,58 @@ fn builds_rgba_and_png_thumbnail_on_demand() {
     assert!(thumbnail.png.starts_with(&[137, 80, 78, 71]));
 }
 
+#[test]
+fn preview_is_larger_than_thumbnail_but_remains_bounded() {
+    let img = RgbaImage::from_pixel(2000, 1000, Rgba([30, 80, 150, 255]));
+    let mut png = Vec::new();
+    DynamicImage::ImageRgba8(img)
+        .write_to(&mut Cursor::new(&mut png), ImageFormat::Png)
+        .unwrap();
+    assert_eq!(image_dimensions("image/png", &png), Some((2000, 1000)));
+    let bytes = png.into();
+    let thumbnail = make_thumbnail("image/png", &bytes).unwrap();
+    let preview = make_preview("image/png", &bytes, || false).unwrap();
+    assert_eq!((thumbnail.width, thumbnail.height), (400, 200));
+    assert_eq!((preview.width, preview.height), (1600, 800));
+    assert_eq!(preview.rgba.len(), 1600 * 800 * 4);
+}
+
+#[test]
+fn original_dimensions_and_preview_support_jpeg_and_webp() {
+    for (mime, format) in [
+        ("image/jpeg", ImageFormat::Jpeg),
+        ("image/webp", ImageFormat::WebP),
+    ] {
+        let image = DynamicImage::ImageRgb8(::image::RgbImage::from_pixel(
+            240,
+            480,
+            ::image::Rgb([25, 75, 150]),
+        ));
+        let mut encoded = Vec::new();
+        image
+            .write_to(&mut Cursor::new(&mut encoded), format)
+            .unwrap();
+        assert_eq!(image_dimensions(mime, &encoded), Some((240, 480)));
+        let preview = make_preview(mime, &encoded.into(), || false).unwrap();
+        assert_eq!((preview.width, preview.height), (240, 480));
+    }
+    assert!(image_dimensions("image/png", &[0, 1, 2]).is_none());
+    assert!(make_preview("image/png", &vec![0, 1, 2].into(), || false).is_none());
+}
+
+#[test]
+fn streamed_preview_obeys_cancellation_during_decode() {
+    let png = encode_large_test_png().into();
+    let calls = std::cell::Cell::new(0);
+    let preview = make_preview("image/png", &png, || {
+        calls.set(calls.get() + 1);
+        calls.get() > 20
+    });
+    assert!(preview.is_none());
+    assert_eq!(calls.get(), 21);
+    assert!(make_preview("image/png", &png, || true).is_none());
+}
+
 fn encode_large_test_png() -> Vec<u8> {
     let img = RgbaImage::from_fn(1024, 768, |x, y| {
         let mixed = x

@@ -4,7 +4,7 @@ mod content;
 use super::super::style::{
     highlight_history_target, pressed_entry_button_style, transparent_entry_button_style,
 };
-use super::state::RowRenderState;
+use super::{HISTORY_ROW_HEIGHT, state::RowRenderState};
 use crate::app::Message;
 use crate::app::model::FocusPart;
 use cosmic::iced::{Alignment, Length};
@@ -27,7 +27,8 @@ pub(in crate::app) fn history_row(state: RowRenderState) -> Element<'static, Mes
         })
         .on_press(Message::CopyFromHistory(state.idx))
         .width(Length::Fill)
-        .padding([8, 12]);
+        .height(Length::Fill)
+        .padding([8, 16]);
 
     let entry_active = state.row_keyboard_focus == Some(FocusPart::Entry)
         || state.hovered_focus == Some(FocusPart::Entry);
@@ -44,8 +45,9 @@ pub(in crate::app) fn history_row(state: RowRenderState) -> Element<'static, Mes
         .width(Length::Fill);
 
     let row_card = widget::container(entry)
-        .class(cosmic::theme::Container::Card)
+        .class(cosmic::theme::Container::Transparent)
         .width(Length::Fill)
+        .height(Length::Fixed(HISTORY_ROW_HEIGHT))
         .clip(true);
 
     widget::mouse_area(row_card)

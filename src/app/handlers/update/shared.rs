@@ -23,35 +23,32 @@ pub(super) fn cache_thumbnail_handle(app: &mut AppModel, entry: &ClipboardEntry)
 }
 
 pub(super) fn prune_thumbnail_handles(app: &mut AppModel) {
-    app.thumbnail_handles.retain(|key, _| {
-        app.history.iter().any(|item| match &item.entry {
-            ClipboardEntry::Image { bytes, hash, .. } => key == &(*hash, bytes.len()),
-            ClipboardEntry::Text(_) => false,
+    let live: std::collections::HashSet<_> = app
+        .history
+        .iter()
+        .filter_map(|item| match &item.entry {
+            ClipboardEntry::Image { bytes, hash, .. } => Some((*hash, bytes.len())),
+            ClipboardEntry::Text(_) => None,
         })
-    });
-    app.failed_thumbnails.retain(|key| {
-        app.history.iter().any(|item| match &item.entry {
-            ClipboardEntry::Image { bytes, hash, .. } => key == &(*hash, bytes.len()),
-            ClipboardEntry::Text(_) => false,
-        })
-    });
+        .collect();
+    app.thumbnail_handles.retain(|key, _| live.contains(key));
+    app.image_dimensions.retain(|key, _| live.contains(key));
+    app.failed_thumbnails.retain(|key| live.contains(key));
 }
 
 pub(super) fn warm_thumbnail_handles(app: &mut AppModel) {
-    for item in app.history.iter() {
-        let ClipboardEntry::Image {
+    for item in &app.history {
+        if let ClipboardEntry::Image {
             bytes,
             hash,
-            thumbnail_png: Some(thumbnail_png),
+            thumbnail_png: Some(png),
             ..
         } = &item.entry
-        else {
-            continue;
-        };
-
-        app.thumbnail_handles
-            .entry((*hash, bytes.len()))
-            .or_insert_with(|| ImageHandle::from_bytes(thumbnail_png.clone()));
+        {
+            app.thumbnail_handles
+                .entry((*hash, bytes.len()))
+                .or_insert_with(|| ImageHandle::from_bytes(png.clone()));
+        }
     }
 }
 
@@ -92,9 +89,10 @@ fn schedule_missing_thumbnails_after(
         };
 
         let key = (*hash, bytes.len());
-        if thumbnail_png.is_some()
-            || app.thumbnail_handles.contains_key(&key)
-            || app.failed_thumbnails.contains(&key)
+        if app.image_dimensions.contains_key(&key)
+            && (thumbnail_png.is_some()
+                || app.thumbnail_handles.contains_key(&key)
+                || app.failed_thumbnails.contains(&key))
         {
             continue;
         }
@@ -142,32 +140,66 @@ pub(super) fn decode_thumbnail(
     )
 }
 
+pub(super) fn decode_image_dimensions(
+    mime: String,
+    bytes: bytes::Bytes,
+    key: (u64, usize),
+) -> Task<cosmic::Action<crate::app::Message>> {
+    Task::perform(
+        async move {
+            tokio::task::spawn_blocking(move || {
+                crate::services::clipboard::image_dimensions(&mime, &bytes)
+            })
+            .await
+            .unwrap_or(None)
+        },
+        move |dimensions| {
+            cosmic::Action::App(crate::app::Message::ImageDimensionsReady { key, dimensions })
+        },
+    )
+}
+
 pub(super) fn row_has_preview(app: &AppModel, idx: usize) -> bool {
     app.history
         .get(idx)
-        .and_then(|item| match &item.entry {
-            ClipboardEntry::Text(text) => Some(text_overlay_available(text)),
-            ClipboardEntry::Image { .. } => None,
+        .map(|item| match &item.entry {
+            ClipboardEntry::Text(text) => text_overlay_available(text),
+            ClipboardEntry::Image { .. } => true,
         })
         .unwrap_or(false)
 }
 
-pub(super) fn parse_usize_field(input: &str) -> Result<usize, &'static str> {
+/// Parse failures shared by numeric settings fields; the UI maps these to
+/// Fluent messages.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum FieldError {
+    Required,
+    NotAnInteger,
+}
+
+impl FieldError {
+    pub(super) fn message(self) -> String {
+        match self {
+            Self::Required => crate::fl!("error-field-required"),
+            Self::NotAnInteger => crate::fl!("error-field-integer"),
+        }
+    }
+}
+
+pub(super) fn parse_usize_field(input: &str) -> Result<usize, FieldError> {
     let trimmed = input.trim();
     if trimmed.is_empty() {
-        return Err("value is required");
+        return Err(FieldError::Required);
     }
     trimmed
         .parse::<usize>()
-        .map_err(|_| "must be a valid positive integer")
+        .map_err(|_| FieldError::NotAnInteger)
 }
 
-pub(super) fn parse_u32_field(input: &str) -> Result<u32, &'static str> {
+pub(super) fn parse_u32_field(input: &str) -> Result<u32, FieldError> {
     let trimmed = input.trim();
     if trimmed.is_empty() {
-        return Err("value is required");
+        return Err(FieldError::Required);
     }
-    trimmed
-        .parse::<u32>()
-        .map_err(|_| "must be a valid positive integer")
+    trimmed.parse::<u32>().map_err(|_| FieldError::NotAnInteger)
 }

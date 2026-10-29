@@ -1,20 +1,53 @@
 use super::shared::{parse_u32_field, parse_usize_field, prune_thumbnail_handles};
+use crate::app::model::ImageMiBError;
 use crate::app::model::SettingsDraft;
+use crate::app::model::parse_image_mib;
 use crate::app::{AppModel, Message, pinned_history};
+use crate::fl;
 use crate::services::clipboard;
 use crate::settings::AppSettings;
 
 use super::super::history;
 
+fn image_mib_error_message(error: ImageMiBError) -> String {
+    match error {
+        ImageMiBError::NotANumber => fl!("error-mib-number"),
+        ImageMiBError::OutOfRange => fl!("error-mib-range"),
+    }
+}
+
 pub(super) fn handle(app: &mut AppModel, message: Message) -> bool {
     match message {
         Message::ToggleSettingsPanel => {
             app.settings_open = !app.settings_open;
+            app.about_open = false;
             app.settings_error = None;
-            app.text_overlay_index = None;
+            app.close_preview();
+            app.hovered_index = None;
+            app.keyboard_focus = None;
+            app.hovered_focus = None;
             if app.settings_open {
                 app.settings_draft = SettingsDraft::from_settings(&app.settings);
             }
+            true
+        }
+        Message::ToggleAbout => {
+            app.about_open = !app.about_open;
+            app.settings_open = false;
+            app.settings_error = None;
+            app.close_preview();
+            app.hovered_index = None;
+            app.keyboard_focus = None;
+            app.hovered_focus = None;
+            true
+        }
+        Message::BackToHistory => {
+            app.settings_open = false;
+            app.about_open = false;
+            app.settings_error = None;
+            app.hovered_index = None;
+            app.keyboard_focus = None;
+            app.hovered_focus = None;
             true
         }
         Message::SettingsMaxHistoryChanged(value) => {
@@ -25,8 +58,8 @@ pub(super) fn handle(app: &mut AppModel, message: Message) -> bool {
             app.settings_draft.max_pinned = value;
             true
         }
-        Message::SettingsMaxImageBytesChanged(value) => {
-            app.settings_draft.max_image_bytes = value;
+        Message::SettingsMaxImageMibChanged(value) => {
+            app.settings_draft.max_image_mib = value;
             true
         }
         Message::SettingsMaxImageDimensionChanged(value) => {
@@ -45,7 +78,7 @@ pub(super) fn handle(app: &mut AppModel, message: Message) -> bool {
                     app.settings_error = None;
                 }
                 Err(err) => {
-                    app.settings_error = Some(format!("Failed to save settings: {err}"));
+                    app.settings_error = Some(fl!("settings-error-save", error = err.to_string()));
                 }
             }
             true
@@ -62,7 +95,7 @@ pub(super) fn handle(app: &mut AppModel, message: Message) -> bool {
                     app.settings_error = None;
                 }
                 Err(err) => {
-                    app.settings_error = Some(format!("Failed to save settings: {err}"));
+                    app.settings_error = Some(fl!("settings-error-save", error = err.to_string()));
                 }
             }
             true
@@ -71,21 +104,24 @@ pub(super) fn handle(app: &mut AppModel, message: Message) -> bool {
             let max_history = match parse_usize_field(&app.settings_draft.max_history) {
                 Ok(v) => v,
                 Err(err) => {
-                    app.settings_error = Some(format!("Max history: {err}"));
+                    app.settings_error = Some(fl!("settings-error-history", error = err.message()));
                     return true;
                 }
             };
             let max_pinned = match parse_usize_field(&app.settings_draft.max_pinned) {
                 Ok(v) => v,
                 Err(err) => {
-                    app.settings_error = Some(format!("Max pinned: {err}"));
+                    app.settings_error = Some(fl!("settings-error-pinned", error = err.message()));
                     return true;
                 }
             };
-            let max_image_bytes = match parse_usize_field(&app.settings_draft.max_image_bytes) {
+            let max_image_bytes = match parse_image_mib(&app.settings_draft.max_image_mib) {
                 Ok(v) => v,
                 Err(err) => {
-                    app.settings_error = Some(format!("Max image bytes: {err}"));
+                    app.settings_error = Some(fl!(
+                        "settings-error-image-size",
+                        error = image_mib_error_message(err)
+                    ));
                     return true;
                 }
             };
@@ -93,41 +129,42 @@ pub(super) fn handle(app: &mut AppModel, message: Message) -> bool {
                 match parse_u32_field(&app.settings_draft.max_image_dimension_px) {
                     Ok(v) => v,
                     Err(err) => {
-                        app.settings_error = Some(format!("Max image dimension: {err}"));
+                        app.settings_error =
+                            Some(fl!("settings-error-image-dimension", error = err.message()));
                         return true;
                     }
                 };
 
             if !(AppSettings::MIN_HISTORY..=AppSettings::MAX_HISTORY).contains(&max_history) {
-                app.settings_error = Some(format!(
-                    "Max history must be between {} and {}",
-                    AppSettings::MIN_HISTORY,
-                    AppSettings::MAX_HISTORY
+                app.settings_error = Some(fl!(
+                    "settings-error-history-range",
+                    min = (AppSettings::MIN_HISTORY as u32),
+                    max = (AppSettings::MAX_HISTORY as u32)
                 ));
                 return true;
             }
 
             if !(AppSettings::MIN_PINNED..=AppSettings::MAX_PINNED).contains(&max_pinned) {
-                app.settings_error = Some(format!(
-                    "Max pinned must be between {} and {}",
-                    AppSettings::MIN_PINNED,
-                    AppSettings::MAX_PINNED
+                app.settings_error = Some(fl!(
+                    "settings-error-pinned-range",
+                    min = (AppSettings::MIN_PINNED as u32),
+                    max = (AppSettings::MAX_PINNED as u32)
                 ));
                 return true;
             }
 
             if max_pinned > max_history {
-                app.settings_error = Some("Max pinned cannot be greater than max history".into());
+                app.settings_error = Some(fl!("settings-error-pinned-le-history"));
                 return true;
             }
 
             if !(AppSettings::MIN_IMAGE_BYTES..=AppSettings::MAX_IMAGE_BYTES)
                 .contains(&max_image_bytes)
             {
-                app.settings_error = Some(format!(
-                    "Max image bytes must be between {} and {}",
-                    AppSettings::MIN_IMAGE_BYTES,
-                    AppSettings::MAX_IMAGE_BYTES
+                app.settings_error = Some(fl!(
+                    "settings-error-image-bytes-range",
+                    min = (AppSettings::MIN_IMAGE_BYTES as u32),
+                    max = (AppSettings::MAX_IMAGE_BYTES as u32)
                 ));
                 return true;
             }
@@ -135,10 +172,10 @@ pub(super) fn handle(app: &mut AppModel, message: Message) -> bool {
             if !(AppSettings::MIN_IMAGE_DIMENSION_PX..=AppSettings::MAX_IMAGE_DIMENSION_PX)
                 .contains(&max_image_dimension_px)
             {
-                app.settings_error = Some(format!(
-                    "Max image dimension must be between {} and {}",
-                    AppSettings::MIN_IMAGE_DIMENSION_PX,
-                    AppSettings::MAX_IMAGE_DIMENSION_PX
+                app.settings_error = Some(fl!(
+                    "settings-error-image-dimension-range",
+                    min = AppSettings::MIN_IMAGE_DIMENSION_PX,
+                    max = AppSettings::MAX_IMAGE_DIMENSION_PX
                 ));
                 return true;
             }
@@ -155,7 +192,7 @@ pub(super) fn handle(app: &mut AppModel, message: Message) -> bool {
             .normalized();
 
             if let Err(err) = updated.save() {
-                app.settings_error = Some(format!("Failed to save settings: {err}"));
+                app.settings_error = Some(fl!("settings-error-save", error = err.to_string()));
                 return true;
             }
 
@@ -172,7 +209,7 @@ pub(super) fn handle(app: &mut AppModel, message: Message) -> bool {
             history::reconcile_limits(&mut app.history, &app.settings);
             pinned_history::save(&app.history);
             prune_thumbnail_handles(app);
-            app.text_overlay_index = None;
+            app.close_preview();
             app.recompute_filtered_indices();
             true
         }

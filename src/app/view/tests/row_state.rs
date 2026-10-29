@@ -40,6 +40,7 @@ fn row_render_state_image_snapshot_keeps_lightweight_metadata_and_handle() {
     });
     app.thumbnail_handles
         .insert((42, 4096), ImageHandle::from_bytes(thumbnail));
+    app.image_dimensions.insert((42, 4096), Some((1920, 1080)));
 
     let state = RowRenderState::from_app(&app, 0, &app.history[0]);
 
@@ -49,9 +50,11 @@ fn row_render_state_image_snapshot_keeps_lightweight_metadata_and_handle() {
             bytes_len,
             content_hash,
             thumbnail_handle,
+            dimensions,
         } => {
             assert_eq!(mime, "image/png");
             assert_eq!(bytes_len, 4096);
+            assert_eq!(dimensions, Some((1920, 1080)));
             assert_eq!(content_hash, 42);
             assert!(thumbnail_handle.is_some());
             assert!(state.pinned);

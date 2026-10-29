@@ -1,6 +1,6 @@
 use super::shared::{
-    cache_thumbnail_handle, decode_thumbnail, prune_thumbnail_handles, schedule_missing_thumbnails,
-    schedule_missing_thumbnails_after_clipboard_change,
+    cache_thumbnail_handle, decode_image_dimensions, decode_thumbnail, prune_thumbnail_handles,
+    schedule_missing_thumbnails, schedule_missing_thumbnails_after_clipboard_change,
 };
 use crate::app::model::HistoryItem;
 use crate::app::{AppModel, Message, pinned_history};
@@ -42,7 +42,7 @@ pub(super) fn handle(
             history::insert_after_pins(&mut app.history, HistoryItem { entry, pinned });
             history::trim_history(&mut app.history, &app.settings);
             prune_thumbnail_handles(app);
-            app.text_overlay_index = None;
+            app.close_preview();
             app.recompute_filtered_indices();
             if pinned {
                 pinned_history::save(&app.history);
@@ -62,20 +62,19 @@ pub(super) fn handle(
             let key = (hash, bytes_len);
             app.pending_thumbnails.remove(&key);
 
-            let Some(thumbnail) = thumbnail else {
-                app.failed_thumbnails.insert(key);
-                return Some(if app.popup.is_some() {
-                    schedule_missing_thumbnails(app)
-                } else {
-                    Task::none()
-                });
-            };
             let Some(item) = app.history.iter_mut().find(|item| match &item.entry {
                 ClipboardEntry::Image { bytes, hash, .. } => (*hash, bytes.len()) == key,
                 ClipboardEntry::Text(_) => false,
             }) else {
                 return Some(schedule_missing_thumbnails(app));
             };
+            let Some(thumbnail) = thumbnail else {
+                app.failed_thumbnails.insert(key);
+                app.image_dimensions.entry(key).or_insert(None);
+                return Some(schedule_missing_thumbnails(app));
+            };
+            app.image_dimensions
+                .insert(key, Some(thumbnail.source_dimensions));
 
             if let ClipboardEntry::Image { thumbnail_png, .. } = &mut item.entry {
                 *thumbnail_png = Some(thumbnail.png);
@@ -104,41 +103,46 @@ pub(super) fn handle(
                 return Some(Task::none());
             }
 
-            let Some((mime, bytes)) = app.history.iter().find_map(|item| match &item.entry {
-                ClipboardEntry::Image {
-                    mime,
-                    bytes,
-                    hash,
-                    thumbnail_png: None,
-                } if (*hash, bytes.len()) == key => Some((mime.clone(), bytes.clone())),
-                _ => None,
-            }) else {
+            let Some((mime, bytes, needs_thumbnail)) =
+                app.history.iter().find_map(|item| match &item.entry {
+                    ClipboardEntry::Image {
+                        mime,
+                        bytes,
+                        hash,
+                        thumbnail_png,
+                    } if (*hash, bytes.len()) == key => Some((
+                        mime.clone(),
+                        bytes.clone(),
+                        thumbnail_png.is_none()
+                            && !app.thumbnail_handles.contains_key(&key)
+                            && !app.failed_thumbnails.contains(&key),
+                    )),
+                    _ => None,
+                })
+            else {
                 app.pending_thumbnails.remove(&key);
                 return Some(schedule_missing_thumbnails(app));
             };
 
-            Some(decode_thumbnail(mime, bytes, key))
+            Some(if needs_thumbnail {
+                decode_thumbnail(mime, bytes, key)
+            } else {
+                decode_image_dimensions(mime, bytes, key)
+            })
+        }
+        Message::ImageDimensionsReady { key, dimensions } => {
+            app.pending_thumbnails.remove(&key);
+            if app.history.iter().any(|item| matches!(&item.entry, ClipboardEntry::Image { bytes, hash, .. } if (*hash, bytes.len()) == key)) {
+                app.image_dimensions.insert(key, dimensions);
+            }
+            Some(schedule_missing_thumbnails(app))
         }
         Message::TogglePin(index) => {
             if history::toggle_pin(&mut app.history, index, &app.settings) {
                 pinned_history::save(&app.history);
             }
-            app.text_overlay_index = None;
+            app.close_preview();
             app.recompute_filtered_indices();
-            Some(Task::none())
-        }
-        Message::OpenTextOverlay(index) => {
-            if app
-                .history
-                .get(index)
-                .is_some_and(|item| matches!(item.entry, ClipboardEntry::Text(_)))
-            {
-                app.text_overlay_index = Some(index);
-            }
-            Some(Task::none())
-        }
-        Message::CloseTextOverlay => {
-            app.text_overlay_index = None;
             Some(Task::none())
         }
         Message::CopyFromHistory(index) => {
@@ -165,7 +169,7 @@ pub(super) fn handle(
         Message::RemoveHistory(index) => {
             let removed_pinned = app.history.remove(index).is_some_and(|item| item.pinned);
             prune_thumbnail_handles(app);
-            app.text_overlay_index = None;
+            app.close_preview();
             app.recompute_filtered_indices();
             if removed_pinned {
                 pinned_history::save(&app.history);
@@ -175,7 +179,7 @@ pub(super) fn handle(
         Message::ClearHistory => {
             app.history.retain(|item| item.pinned);
             prune_thumbnail_handles(app);
-            app.text_overlay_index = None;
+            app.close_preview();
             app.recompute_filtered_indices();
             pinned_history::save(&app.history);
             Some(Task::none())
@@ -183,7 +187,7 @@ pub(super) fn handle(
         Message::SearchChanged(query) => {
             app.search_query = query;
             app.recompute_filtered_indices();
-            app.text_overlay_index = None;
+            app.close_preview();
             app.hovered_index = None;
             app.hovered_focus = None;
             app.keyboard_focus = None;

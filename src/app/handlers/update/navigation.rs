@@ -10,6 +10,28 @@ pub(super) fn handle(
     app: &mut AppModel,
     message: Message,
 ) -> Option<Task<cosmic::Action<Message>>> {
+    if app.settings_open || app.about_open {
+        match message {
+            Message::EscapePressed => {
+                super::settings::handle(app, Message::BackToHistory);
+                return Some(Task::none());
+            }
+            Message::KeyboardNavigateUp
+            | Message::KeyboardNavigateDown
+            | Message::MoveFocusLeft
+            | Message::MoveFocusRight
+            | Message::ActivateSelection => return Some(Task::none()),
+            _ => {}
+        }
+    }
+    if app.preview_is_open()
+        && matches!(
+            message,
+            Message::MoveFocusLeft | Message::MoveFocusRight | Message::ActivateSelection
+        )
+    {
+        return Some(Task::none());
+    }
     match message {
         Message::HoverEntry(opt) => {
             let next_index = opt.map(|(idx, _)| idx);
@@ -38,6 +60,8 @@ pub(super) fn handle(
         Message::KeyboardNavigateDown if app.text_overlay_index.is_some() => {
             Some(scroll::scroll_text_overlay_down())
         }
+        Message::KeyboardNavigateUp if app.image_preview.is_some() => Some(Task::none()),
+        Message::KeyboardNavigateDown if app.image_preview.is_some() => Some(Task::none()),
         Message::KeyboardNavigateUp => {
             let visible = filtered_indices(app);
             if visible.is_empty() {
@@ -136,7 +160,7 @@ pub(super) fn handle(
                     }
                     FocusPart::Preview => {
                         if row_has_preview(app, idx) {
-                            app.text_overlay_index = Some(idx);
+                            return Some(super::preview::open(app, idx));
                         }
                     }
                     FocusPart::Pin => {
@@ -161,8 +185,8 @@ pub(super) fn handle(
             Some(Task::none())
         }
         Message::EscapePressed => {
-            if app.text_overlay_index.is_some() {
-                app.text_overlay_index = None;
+            if app.preview_is_open() {
+                app.close_preview();
                 Some(Task::none())
             } else {
                 None
