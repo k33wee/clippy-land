@@ -5,10 +5,26 @@
 
 COSMIC panel applet for keeping a history of recently copied text and images.
 
-This applet listens for Wayland data-control selection events and updates the
-history only when the clipboard contents change.
+Search your clipboard, pin entries for later, and preview text or images before copying them.
 
-![applet example](./resources/example.png)
+<img src="./resources/example.png" alt="Clippy Land history with search, an image thumbnail, dimension badge, and pinned notes" width="360">
+
+## Usage
+
+Install **Clippy Land** from [COSMIC Store](https://github.com/pop-os/cosmic-store)
+under **COSMIC Applets**, or use one of the installation guides below.
+
+Open **COSMIC Settings → Desktop → Panel → Applets** and add "Clippy Land" to your panel.
+You might need to log out and back in to see the applet in the list of available applets.
+
+Click the panel icon to open history. Select an entry to copy it and, by default,
+paste it into the active app. Use the pin to keep an entry, the eye to preview it,
+and the top-right gear to open Settings. You can also [set up a keyboard shortcut](#keyboard-shortcut).
+
+## Guides
+
+<details>
+<summary>Features and keyboard controls</summary>
 
 ## Main features
 
@@ -37,21 +53,28 @@ history only when the clipboard contents change.
   - press **Q** to close either preview overlay
   - press **Esc** to return from a preview, Settings, or About to history; press it again to close the popup
 - An **About** view shows the app version, author, source repository, issue tracker, and license
-- Adds keyboard shortcuts for opening the history (see [Usage](#usage) below)
+- Adds keyboard shortcuts for opening the history (see [Keyboard Shortcut](#keyboard-shortcut))
 
-## Table of Contents
+</details>
 
-- [Install from cosmic store](#cosmic-store)
-- [Usage](#usage)
-- [Settings](#settings)
-- [Install with Flatpak](#install-with-flatpak)
-- [Install for Debian/Ubuntu](#install-for-debianubuntu)
-- [Install for Fedora](#install-for-fedora)
-- [Build/Install with just](#buildinstall-with-just)
-- [Testing](#testing)
-- [Install with custom paths](#install-with-custom-paths)
-- [Contributing docs](#contributing-docs)
-- [Notes](#notes)
+<details>
+<summary>More screenshots</summary>
+
+Screenshots use sample clipboard entries. Colors follow your COSMIC theme.
+The panel popup supports frosted glass; the shortcut popup uses a solid theme background.
+
+| Settings | Image preview |
+| --- | --- |
+| <img src="./resources/screenshots/settings.png" alt="Compact Settings with history, image limits, and behavior controls" width="300" loading="lazy"> | <img src="./resources/screenshots/image-preview.png" alt="Image preview with original dimensions, format, and file size" width="300" loading="lazy"> |
+
+| About | Frosted panel popup |
+| --- | --- |
+| <img src="./resources/screenshots/about.png" alt="About page with version, source, issue tracker, and license" width="300" loading="lazy"> | <img src="./resources/screenshots/panel-popup.png" alt="The panel popup with COSMIC frosted glass over a wallpaper" width="300" loading="lazy"> |
+
+</details>
+
+<details>
+<summary>Install from COSMIC Store</summary>
 
 ## Cosmic Store
 
@@ -65,10 +88,10 @@ flatpak remote-add --if-not-exists --user cosmic https://apt.pop-os.org/cosmic/c
 
 Just install it from the store and you'll have the flatpak sandbox installed!
 
-## Usage
+</details>
 
-Open **COSMIC Settings → Desktop → Panel → Applets** and add "Clippy Land" to your panel.
-You might need to log out and back in to see the applet in the list of available applets.
+<details>
+<summary>Set up a keyboard shortcut</summary>
 
 ## Keyboard Shortcut
 
@@ -86,6 +109,11 @@ For local development, the binary also supports:
 
 - `--standalone`: force open popup on startup
 - `--no-standalone`: disable auto-open behavior
+
+</details>
+
+<details>
+<summary>Settings, limits, and stored data</summary>
 
 ## Settings
 
@@ -121,6 +149,11 @@ Pinned clipboard entries are stored separately as app state so they survive app 
 
 The **Clear History** action removes only unpinned entries. To remove a pinned entry, unpin it or delete that entry directly.
 
+</details>
+
+<details>
+<summary>Install with Flatpak</summary>
+
 ## Install with Flatpak
 
 1. Add the required remotes (if not already added):
@@ -138,6 +171,11 @@ flatpak install --user ./clippy-land_<version>.flatpak
 
 This will install the applet for your user. If you encounter missing runtime errors, ensure the remotes above are added and try again.
 
+</details>
+
+<details>
+<summary>Install for Debian/Ubuntu</summary>
+
 ## Install for Debian/Ubuntu
 
 Download the latest .deb from the [releases page](https://github.com/k33wee/clippy-land/releases/):
@@ -148,6 +186,11 @@ sudo apt install ./cosmic-applet-clippy-land_<version>_amd64.deb
 ```
 
 The packaged desktop entry now points directly at `/usr/bin/cosmic-applet-clippy-land`, so COSMIC will not accidentally launch an older binary from your `$PATH` during upgrades.
+
+</details>
+
+<details>
+<summary>Install for Fedora</summary>
 
 ## Install for Fedora
 
@@ -170,6 +213,11 @@ sudo wget \
     -O /etc/yum.repos.d/_copr:copr.fedorainfracloud.org:kordus:cosmic-applets.repo
 rpm-ostree install cosmic-applet-clippy-land
 ```
+
+</details>
+
+<details>
+<summary>Build and install with just</summary>
 
 ## Build/Install with just
 
@@ -195,6 +243,11 @@ sudo just uninstall
 
 `just install` now renders the desktop entry with an absolute `Exec=` path for the chosen prefix, so the applet launcher stays tied to that exact install instead of whichever `cosmic-applet-clippy-land` happens to appear first in `$PATH`.
 
+</details>
+
+<details>
+<summary>Run the tests</summary>
+
 ## Testing
 
 Use the provided `just` recipes:
@@ -212,10 +265,10 @@ just e2e
 
 E2E tests require a Wayland session and helper tools such as `wl-copy`, `wl-paste`, and `wtype`.
 
-## Contributing docs
+</details>
 
-- For issue reporting and panel-log collection, see [DEBUGGING.md](./DEBUGGING.md).
-- For adding or updating translations, see [TRANSLATION.md](./TRANSLATION.md).
+<details>
+<summary>Custom install paths and cleanup</summary>
 
 ## Install with custom paths
 
@@ -246,10 +299,25 @@ All paths are derived from `prefix`:
 
 If you previously installed Clippy Land under `~/.local` and then switched to the `.deb` or another system install, remove the older user-local install first with `just uninstall-user`. Per the desktop entry spec, a user-local desktop file with the same ID overrides the system one, and older applet installs could also leave behind a stale `~/.local/bin/cosmic-applet-clippy-land` binary.
 
+</details>
+
+<details>
+<summary>Technical notes</summary>
+
 ## Notes
+
+This applet listens for Wayland data-control selection events and updates the
+history only when the clipboard contents change.
 
 - App ID is currently `io.github.k33wee.clippy-land`.
 - Debug wrapper log path defaults to `${XDG_STATE_HOME:-$HOME/.local/state}/clippy-land/panel-debug.log`.
+
+</details>
+
+## Contributing docs
+
+- For issue reporting and panel-log collection, see [DEBUGGING.md](./DEBUGGING.md).
+- For adding or updating translations, see [TRANSLATION.md](./TRANSLATION.md).
 
 ## Attribution
 
