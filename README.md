@@ -104,6 +104,8 @@ Go to **COSMIC Settings → Keyboard → Custom Shortcuts**, add a new shortcut 
 - **Command:** `cosmic-applet-clippy-land --toggle` (or `flatpak run io.github.k33wee.clippy-land --toggle` if installed via Flatpak)
 - **Shortcut:** your preferred key combo (e.g. `Super+V`)
 
+The shortcut popup closes when it loses keyboard focus (for example, after clicking another window). Esc and the shortcut itself also close it.
+
 > **Note:** Due to a current limitation in the COSMIC panel, opening a popup without a pointer event (i.e. without actually clicking the applet icon) is not natively supported. As a workaround, `--toggle` opens the history as a layer surface rather than as the usual dropdown under the icon. When the focused window is known (via the `cosmic-toplevel-info` protocol), the visible popup appears near the center of that window, including when hosted by COSMIC Panel. Opposing layer-shell anchors and output-relative margins keep the actual surface near that window while working around the panel proxy's configure limitation. Otherwise it falls back to the top strip on the **active monitor** (the compositor tracks which output you are working on, even with no windows open). The desktop entry requests privileged compositor access with `X-HostWaylandDisplay=true`. When launched by a supporting COSMIC Panel, native and Flatpak applets share its granted connection for clipboard capture/publishing, focused-window tracking, and auto-paste. If that connection or the required protocols are unavailable (including a direct sandbox launch), the applet keeps the active-monitor placement fallback.
 
 For local development, the binary also supports:
