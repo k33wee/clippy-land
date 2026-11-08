@@ -16,6 +16,11 @@ pub(super) fn handle(
 ) -> Option<Task<cosmic::Action<Message>>> {
     match message {
         Message::ClipboardChanged(entry) => {
+            // A transfer started before the switch changed may still complete.
+            if !app.settings.capture_images && matches!(entry, ClipboardEntry::Image { .. }) {
+                return Some(Task::none());
+            }
+
             if app
                 .history
                 .front()

@@ -66,6 +66,21 @@ pub(super) fn handle(app: &mut AppModel, message: Message) -> bool {
             app.settings_draft.max_image_dimension_px = value;
             true
         }
+        Message::SettingsCaptureImagesToggled(enabled) => {
+            let mut updated = app.settings.clone();
+            updated.capture_images = enabled;
+            match updated.save() {
+                Ok(()) => {
+                    app.settings = updated;
+                    clipboard::configure_image_capture(enabled);
+                    app.settings_error = None;
+                }
+                Err(err) => {
+                    app.settings_error = Some(fl!("settings-error-save", error = err.to_string()));
+                }
+            }
+            true
+        }
         Message::SettingsPasteOnActionToggled(enabled) => {
             let mut updated = app.settings.clone();
             updated.paste_on_action = enabled;
@@ -182,6 +197,7 @@ pub(super) fn handle(app: &mut AppModel, message: Message) -> bool {
 
             let updated = AppSettings {
                 schema_version: 1,
+                capture_images: app.settings.capture_images,
                 paste_on_action: app.settings.paste_on_action,
                 close_popup_on_action: app.settings.close_popup_on_action,
                 max_history,

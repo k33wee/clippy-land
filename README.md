@@ -36,6 +36,7 @@ and the top-right gear to open Settings. You can also [set up a keyboard shortcu
 - In-popup **Settings** panel to adjust limits and apply them immediately:
   - max history entries
   - max pinned entries
+  - whether to record new images (text-only history when disabled)
   - max image byte size
   - max image dimensions
   - paste into the active app after selection
@@ -125,6 +126,7 @@ Settings are validated before apply/save. Current allowed ranges are:
 
 - `max_history`: `30..=5000`
 - `max_pinned`: `0..=500` and must be `<= max_history`
+- `capture_images`: record new images (including local image files offered by the clipboard); disabling it skips image transfers/decoding and keeps existing history and pins. File URIs offered as text can still appear as text.
 - `max_image_bytes`: `262144..=67108864`
 - `max_image_dimension_px`: `512..=16384`
 - `paste_on_action`: paste an activated entry with Ctrl+V, or Ctrl+Shift+V in recognized terminals
@@ -132,6 +134,7 @@ Settings are validated before apply/save. Current allowed ranges are:
 
 By default, Clippy Land starts with:
 
+- `capture_images = true`
 - `paste_on_action = true`
 - `close_popup_on_action = true`
 - `max_history = 200`

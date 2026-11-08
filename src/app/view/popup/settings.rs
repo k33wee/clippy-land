@@ -24,6 +24,12 @@ pub(super) fn settings_panel(app: &AppModel) -> Element<'_, Message> {
 
     let images = widget::settings::section()
         .title(fl!("settings-images"))
+        .add(toggle_row(
+            fl!("settings-capture-images"),
+            app.settings.capture_images,
+            Message::SettingsCaptureImagesToggled,
+            fl!("settings-capture-images-help"),
+        ))
         .add(number_row(
             fl!("settings-image-size"),
             fl!("settings-placeholder-image-mib"),

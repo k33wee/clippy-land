@@ -7,6 +7,8 @@ use std::path::{Path, PathBuf};
 #[serde(default)]
 pub struct AppSettings {
     pub schema_version: u8,
+    /// Record newly copied images, including images copied as local files.
+    pub capture_images: bool,
     /// Paste the selected clipboard entry into the previously focused app.
     pub paste_on_action: bool,
     /// Close the popup after copying or pasting an entry.
@@ -21,6 +23,7 @@ impl Default for AppSettings {
     fn default() -> Self {
         Self {
             schema_version: 1,
+            capture_images: true,
             paste_on_action: true,
             close_popup_on_action: true,
             max_history: 200,
@@ -131,6 +134,7 @@ mod tests {
         let settings = AppSettings::default().normalized();
 
         assert_eq!(settings.schema_version, 1);
+        assert!(settings.capture_images);
         assert!(settings.paste_on_action);
         assert!(settings.close_popup_on_action);
         assert!(settings.max_history >= AppSettings::MIN_HISTORY);
@@ -146,6 +150,7 @@ mod tests {
     fn normalization_clamps_and_relates_fields() {
         let raw = AppSettings {
             schema_version: 9,
+            capture_images: false,
             paste_on_action: false,
             close_popup_on_action: false,
             max_history: 1,
@@ -157,6 +162,7 @@ mod tests {
         let normalized = raw.normalized();
 
         assert_eq!(normalized.schema_version, 1);
+        assert!(!normalized.capture_images);
         assert!(!normalized.paste_on_action);
         assert!(!normalized.close_popup_on_action);
         assert_eq!(normalized.max_history, AppSettings::MIN_HISTORY);
@@ -181,6 +187,13 @@ mod tests {
     }
 
     #[test]
+    fn older_config_keeps_image_capture_enabled() {
+        let settings: AppSettings = toml::from_str("max_history = 300").unwrap();
+        assert!(settings.capture_images);
+        assert_eq!(settings.max_history, 300);
+    }
+
+    #[test]
     fn save_and_load_round_trip_path() {
         let unique = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -190,6 +203,7 @@ mod tests {
 
         let settings = AppSettings {
             schema_version: 1,
+            capture_images: false,
             paste_on_action: false,
             close_popup_on_action: true,
             max_history: 333,

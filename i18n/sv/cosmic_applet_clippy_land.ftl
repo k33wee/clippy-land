@@ -1,4 +1,6 @@
 empty = Urklipp är tomt
+settings-capture-images = Spara bilder
+settings-capture-images-help = Lägg till nya bilder i historiken. Befintliga och fästa bilder behålls när detta stängs av.
 remove = Ta bort
 pin = Fäst
 unpin = Lossa

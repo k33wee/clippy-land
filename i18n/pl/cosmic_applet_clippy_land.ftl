@@ -1,4 +1,6 @@
 empty = Schowek jest pusty
+settings-capture-images = Zapisuj obrazy
+settings-capture-images-help = Dodawaj nowe obrazy do historii. Wyłączenie zachowuje istniejące i przypięte obrazy.
 remove = Usuń
 pin = Przypnij
 unpin = Odepnij

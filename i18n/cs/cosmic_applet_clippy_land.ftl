@@ -1,4 +1,6 @@
 empty = Schránka je prázdná
+settings-capture-images = Zaznamenávat obrázky
+settings-capture-images-help = Přidávat nové obrázky do historie. Vypnutí zachová stávající i připnuté obrázky.
 remove = Odstranit
 pin = Připnout
 unpin = Odepnout

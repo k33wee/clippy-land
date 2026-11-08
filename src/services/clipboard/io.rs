@@ -4,7 +4,7 @@ use super::image::{
     clipboard_entry_from_image_bytes, clipboard_entry_from_image_path, log_image_too_large,
 };
 use super::uri::parse_first_local_path_from_uri_list;
-use super::{ClipboardEntry, debug_log, max_image_bytes};
+use super::{ClipboardEntry, capture_images, debug_log, max_image_bytes};
 use std::io::Read;
 use wl_clipboard_rs::{
     copy::{MimeType as CopyMimeType, Options as CopyOptions, Source},
@@ -59,6 +59,9 @@ pub fn read_clipboard_text() -> Option<String> {
 }
 
 pub fn read_clipboard_image() -> Option<ClipboardEntry> {
+    if !capture_images() {
+        return None;
+    }
     const IMAGE_MIMES: [&str; 3] = ["image/png", "image/jpeg", "image/webp"];
 
     for mime in IMAGE_MIMES {
@@ -145,6 +148,9 @@ pub fn write_owned_clipboard_image(mime: String, bytes: bytes::Bytes) -> bool {
 }
 
 fn read_clipboard_image_from_uri_list() -> Option<ClipboardEntry> {
+    if !capture_images() {
+        return None;
+    }
     let result = get_contents(
         ClipboardType::Regular,
         Seat::Unspecified,

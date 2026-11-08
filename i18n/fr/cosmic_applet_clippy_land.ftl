@@ -1,4 +1,6 @@
 empty = Le presse-papier est vide
+settings-capture-images = Enregistrer les images
+settings-capture-images-help = Ajouter les nouvelles images à l'historique. Désactiver cette option conserve les images existantes et épinglées.
 remove = Enlever
 pin = Épingler
 unpin = Désépingler

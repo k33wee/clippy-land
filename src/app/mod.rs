@@ -104,6 +104,7 @@ impl cosmic::Application for AppModel {
         );
 
         let stage_started = Instant::now();
+        clipboard::configure_image_capture(settings.capture_images);
         clipboard::configure_limits(settings.max_image_bytes, settings.max_image_dimension_px);
         init_timing_log(
             "runtime image limits configured",

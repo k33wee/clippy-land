@@ -40,6 +40,33 @@ fn clipboard_changed_dedupes_and_preserves_pin_state() {
 }
 
 #[test]
+fn text_only_capture_ignores_late_images_without_changing_existing_history() {
+    let mut app = AppModel::default();
+    app.settings.capture_images = false;
+    app.history.push_back(HistoryItem {
+        entry: image_entry(42),
+        pinned: true,
+    });
+    app.history.push_back(text_item("keep this text", false));
+
+    dispatch(&mut app, Message::ClipboardChanged(image_entry(99)));
+    dispatch(&mut app, Message::ClipboardChanged(image_entry(42)));
+    assert_eq!(app.history.len(), 2);
+    assert!(app.history[0].pinned);
+    assert_eq!(app.history[0].entry, image_entry(42));
+    assert!(app.thumbnail_handles.is_empty());
+
+    dispatch(&mut app, Message::ClipboardChanged(text_entry("new text")));
+    assert_eq!(app.history.len(), 3);
+    assert_eq!(app.history[1].entry, text_entry("new text"));
+
+    app.settings.capture_images = true;
+    dispatch(&mut app, Message::ClipboardChanged(image_entry(99)));
+    assert_eq!(app.history.len(), 4);
+    assert_eq!(app.history[1].entry, image_entry(99));
+}
+
+#[test]
 fn clipboard_changed_caches_and_prunes_thumbnail_handles() {
     let mut app = AppModel::default();
 

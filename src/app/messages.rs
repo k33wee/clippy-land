@@ -51,6 +51,8 @@ pub enum Message {
     SettingsMaxPinnedChanged(String),
     SettingsMaxImageMibChanged(String),
     SettingsMaxImageDimensionChanged(String),
+    /// Record new clipboard images.
+    SettingsCaptureImagesToggled(bool),
     /// Paste selected entries into the previously focused app.
     SettingsPasteOnActionToggled(bool),
     /// Close the clipboard popup after an entry action.

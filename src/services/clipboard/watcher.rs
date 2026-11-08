@@ -10,7 +10,7 @@ use super::image::{
     clipboard_entry_from_image_bytes, clipboard_entry_from_image_path, log_image_too_large,
 };
 use super::uri::parse_first_local_path_from_uri_list;
-use super::{ClipboardEntry, debug_log, max_image_bytes};
+use super::{ClipboardEntry, capture_images, debug_log, max_image_bytes};
 use os_pipe::pipe;
 use rustix::event::{PollFd, PollFlags, Timespec, poll};
 use rustix::fs::{OFlags, fcntl_getfl, fcntl_setfl};
@@ -334,14 +334,15 @@ fn choose_text_mime(mimes: &[String]) -> Option<String> {
     ordered_text_mimes(mimes).into_iter().next()
 }
 
+fn offered_image_mimes(mimes: &[String], capture_images: bool) -> impl Iterator<Item = &str> {
+    IMAGE_MIMES
+        .into_iter()
+        .filter(move |mime| capture_images && mimes.iter().any(|offered| offered == mime))
+}
+
 #[cfg(test)]
 fn choose_image_mime(mimes: &[String]) -> Option<String> {
-    for preferred in IMAGE_MIMES {
-        if let Some(mime) = mimes.iter().find(|m| m.as_str() == preferred) {
-            return Some(mime.clone());
-        }
-    }
-    None
+    offered_image_mimes(mimes, true).next().map(str::to_owned)
 }
 
 #[cfg(test)]
@@ -480,10 +481,7 @@ fn read_offer(
     queue: &mut EventQueue<State>,
     state: &mut State,
 ) -> Option<ClipboardEntry> {
-    for mime in IMAGE_MIMES {
-        if !mimes.iter().any(|m| m.as_str() == mime) {
-            continue;
-        }
+    for mime in offered_image_mimes(mimes, capture_images()) {
         if state.current.as_ref() != Some(offer) {
             return None;
         }
@@ -514,7 +512,7 @@ fn read_offer(
         }
     }
 
-    if mimes.iter().any(|m| m.as_str() == "text/uri-list") {
+    if capture_images() && mimes.iter().any(|m| m.as_str() == "text/uri-list") {
         if state.current.as_ref() != Some(offer) {
             return None;
         }
@@ -707,13 +705,31 @@ pub fn run(sender: tokio::sync::mpsc::Sender<ClipboardEntry>) {
 
 #[cfg(test)]
 mod tests {
-    use super::{choose_mime, choose_text_mime, is_text_mime, read_pipe_bounded};
+    use super::{
+        choose_mime, choose_text_mime, is_text_mime, offered_image_mimes, read_pipe_bounded,
+    };
     use os_pipe::pipe;
     use std::io::Write;
     use std::time::Duration;
 
     fn mimes(values: &[&str]) -> Vec<String> {
         values.iter().map(|value| (*value).to_string()).collect()
+    }
+
+    #[test]
+    fn text_only_capture_skips_all_image_transfers() {
+        let offered = mimes(&["image/png", "image/jpeg", "image/webp", "text/plain"]);
+        assert_eq!(offered_image_mimes(&offered, false).count(), 0);
+        assert_eq!(
+            offered_image_mimes(&offered, true).collect::<Vec<_>>(),
+            vec!["image/png", "image/jpeg", "image/webp"]
+        );
+        assert_eq!(choose_text_mime(&offered), Some("text/plain".into()));
+        // File lists can still be captured as text, never decoded as images.
+        assert_eq!(
+            choose_text_mime(&mimes(&["image/png", "text/uri-list"])),
+            Some("text/uri-list".into())
+        );
     }
 
     #[test]

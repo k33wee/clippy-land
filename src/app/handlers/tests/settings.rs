@@ -131,6 +131,42 @@ fn apply_settings_converts_mib_without_changing_the_config_schema() {
 }
 
 #[test]
+fn image_capture_toggle_persists_immediately_and_survives_apply() {
+    with_temporary_config(|path| {
+        let mut app = settings_app();
+        app.history.push_back(HistoryItem {
+            entry: image_entry(42),
+            pinned: true,
+        });
+        dispatch(&mut app, Message::SettingsCaptureImagesToggled(false));
+        assert!(!app.settings.capture_images);
+        assert!(!AppSettings::load_from_path(path).capture_images);
+        assert!(app.settings_open);
+        assert_eq!(app.history.len(), 1);
+        assert!(app.history[0].pinned);
+
+        dispatch(&mut app, Message::ApplySettings);
+        assert!(!app.settings.capture_images);
+        assert!(!AppSettings::load_from_path(path).capture_images);
+        dispatch(&mut app, Message::SettingsCaptureImagesToggled(true));
+        assert!(app.settings.capture_images);
+        assert!(AppSettings::load_from_path(path).capture_images);
+    });
+}
+
+#[test]
+fn image_capture_toggle_save_failure_keeps_previous_setting() {
+    with_temporary_config(|path| {
+        std::fs::create_dir(path).unwrap();
+        let mut app = settings_app();
+        dispatch(&mut app, Message::SettingsCaptureImagesToggled(false));
+        std::fs::remove_dir(path).unwrap();
+        assert!(app.settings.capture_images);
+        assert!(app.settings_error.is_some());
+    });
+}
+
+#[test]
 fn behavior_toggles_still_update_and_persist_immediately() {
     with_temporary_config(|path| {
         let mut app = AppModel::default();
