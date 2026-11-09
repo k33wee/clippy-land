@@ -125,7 +125,7 @@
     </screenshot>
   </screenshots>
   <releases>
-    <release version="2.0.0" date="2026-10-29">
+    <release version="2.0.0" date="2026-11-09">
       <url type="details">https://github.com/k33wee/clippy-land/releases/tag/v2.0.0</url>
       <description>
         <p>Redesigned clipboard history UI with previews, a compact settings page, and complete English and Italian localization.</p>
@@ -137,8 +137,12 @@
           <li>About page with version, author, source, issue tracker, and license links.</li>
           <li>Bundled recolorable symbolic panel icon for light and dark panels.</li>
           <li>Complete English and Italian translations.</li>
+          <li>Optional text-only history: disable capture of new images without removing existing images or pins.</li>
+          <li>Close the keyboard-shortcut popup when it loses keyboard focus.</li>
+          <li>Updated COSMIC, clipboard, and other Cargo dependencies.</li>
           <li>Frosted shortcut popup; requires a cosmic-panel build with the fixed layer-surface blur proxy.</li>
         </ul>
+        <p>Known issue: the applet can still crash during COSMIC logout; issue #51 remains under investigation.</p>
       </description>
     </release>
     <release version="1.1.2" date="2026-10-21">
